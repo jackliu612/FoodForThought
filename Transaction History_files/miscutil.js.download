@@ -1,0 +1,3936 @@
+/*
+	miscutil.js
+
+	defines misc utility functions and objects
+
+	---------	----	-------------------------------------------------------
+	5/4/2006	kwb		created
+
+	6/8/2006	kwb		added togglerow(), getradiovalue(), getvalue(), and dumparray()
+
+	6/16/2006	kwb		added CloneObject() and fixed bug in dumparray()
+
+	6/30/2006	kwb		added global _MSIE to detect client browser type
+
+	7/17/2006	kwb		1. added encode_array() to urlencode an array
+						2. added support for booleans to encode()
+
+	7/20/2006	jlb		added validate_email()
+
+	9/13/2006	kwb		changed the debug window to a text area instead of popup window
+
+	10/26/2006	kwb		1. added support for dropdown menus to getvalue()
+						2. added setvalue()
+
+	1/25/2007	kwb		1. added get_element() with support for explicit array indexes
+						2. added setradiovalue() to "set the value" on a radio button group
+						3. added findnode() and findchild() to help navigate the DOM structure
+
+	3/2/2007	kwb		1. improved flexibility of the frame and body params for SubWindow()
+						2. added findchild_ex() that uses for a custom search function
+						3. added removenode() and keycode_type()
+
+	4/2/2007	kwb		made escape() preferred over encodeURIComponent(), since its more like actual url encoding
+
+	20-Jun-2007		kwb		minor fixes for error conditions
+
+	11-Sep-2007		kwb		1. added New_SubWindow(), wrapper around SubWindow constructor
+							2. added src member to SubWindow object, same as wnd.frame.getAttribute( 'src' )
+
+	24-Sep-2007		kwb		added subwindow member .visible to reflect current state
+
+	25-Sep-2007		kwb		added function string_parse() to extract html comments
+
+	4-Oct-2007		kwb		added function SubWindow_displaypage()
+
+	9-Oct-2007		kwb		added subwindow owner member for use with onload hook
+
+	19-Oct-2007		kwb		1. improved error handling in $() function
+							2. added flag 2 to SubWindow_displaypage() to call onload event AFTER window is visible
+
+	2-Nov-2007		kwb		added reveal_node() to auto-scroll the window to a page element
+
+	5-Nov-2007		kwb		1. added select_text() to select text inside an HTML element
+							2. moved the TabControl class to tabcontrol.js
+							3. converted SubWindow and Timer classes to a true object model using prototypes
+
+	10-Dec-2007		kwb		added getpos() to return the absolute position of an HTML element
+
+	19-Dec-2007		kwb		added optional flags param to SubWindow_displaypage()
+
+	6-May-2008		kwb		added setpos() to set the absolute position of an HTML element
+
+	1-Jul-2008		kwb		added check for the correct display style in SubWindow_show()
+							ie- when the window frame element is part of a table
+
+	7-Jul-2008		kwb		added _colvisible global value
+
+	8-Aug-2008		kwb		added support for sub-arrays to get_element()
+
+	4-Sep-2008		kwb		improved display style support in SubWindow.show()
+
+	16-Sep-2008		kwb		enhanced setpos() releative positions to support many more options
+
+	10-Oct-2008		kwb		added htmlentities() function
+
+	16-Feb-2009		kwb		changed order of escape functions in encode() to prefer encodeURIComponent()
+							since it will correctly convert plus signs to "%2B"
+
+	6-Apr-2009		kwb		added optional numrows param to togglerow() in order to toggle multiple rows
+
+	5-Oct-2009		kwb		1. fixed CloneObject() so it will actually return a new object
+							2. fixed setvalue() when using zero or empty string as a menu item value
+							3. added get_params() and search_array()
+							4. added viewpos param to reveal_node()
+
+	16-Mar-2010		kwb		1. added is_numeric() and cancel_event()
+							2. improved encode() to better handle chars above 126
+
+	24-Mar-2010		kwb		removed orientimg() and simplified resizeimg()
+
+	20-Apr-2010		kwb		fixed bug that caused encode( 0 ) to return empty string
+
+	24-Apr-2010		kwb		added _tablevisible style for MSIE compatibility
+
+	3-Jun-2010		kwb		1. is_numeric() will no longer return true for a null value
+							2. added findchild_attr()
+							3. allowed $() to return a 1-element array if an index was requested
+							4. added CloneArray()
+
+	30-Jun-2010		kwb		added deepcopy option to CloneObject()
+
+	6-Jul-2010		kwb		1. added get_style() which returns the computed style of an object
+							2. added get_size() which returns client<Size> minus padding
+
+	12-Jul-2010		kwb		allowed findnode() to search both directions for siblings
+
+	15-Jul-2010		kwb		added MergeObject()
+
+	26-Jul-2010		kwb		fixed getvalue() handling of "empty" values from dropdown menus
+							it will now return the text if value is null or empty string
+
+	27-Jul-2010		kwb		1. added str_to_obj() to more easily build complex object structures
+							2. added nvx() and nvl() to safely fetch object members or a default value
+
+	10-Aug-2010		kwb		search_array() will now use Array.indexOf() when applicable
+
+	18-Aug-2010		kwb		fixed incorrect output from encode() for control chars below 16
+
+	2-Sep-2010		kwb		now _colvisible applies to <col> tags, and _cellvisible to <td> tags
+
+	21-Sep-2010		kwb		fixed error in New_SubWindow() when using a <table> element
+
+	23-Sep-2010		kwb		added empty() function to check for null or false values
+
+	18-Oct-2010		kwb		1. added get_cookie(), set_cookie(), and delete_cookie()
+							2. prevented is_numeric() from returning true for objects
+
+	25-Oct-2010		kwb		added option for togglerow() to hide/show all remaining rows in the table
+
+	5-Nov-2010		kwb		added support for preventDefault() to cancel_event()
+
+	24-Jan-2011		kwb		added search_array_idx()
+
+	7-Apr-2011		kwb		1. added str2hex(), hex2str(), and strpad()
+							2. added support to get_element() for using objects instead of delimited strings
+
+	19-May-2011		kwb		added to_string()
+
+	10-Jun-2011		kwb		fixed str2hex() to support null bytes and to use leading zeros on single digit bytes
+
+	29-Jun-2011		kwb		1. added include file dependencies
+							2. improved str_to_obj() to support quoted literal expressions
+
+	28-Oct-2011		kwb		added SetEventHandler() and MakeCallback()
+
+	10-Nov-2011		kwb		added jQuery compatibility by creating alias j$() for jQuery instead of $()
+
+	8-Dec-2011		kwb		allowed for multiple text nodes between html elements in getnode()
+
+	20-Dec-2011		kwb		added strclip()
+
+	25-Jan-2012		kwb		1. added option to Timer_reset() to use a different timer duration for that cycle
+							2. handled some browser compatibility issues in reveal_node()
+
+	7-Mar-2012		kwb		added check in resizeimg() to allow unloaded images to load first
+
+	7-May-2012		kwb		updated the unloaded image check in resizeimg() to use theimage.complete
+
+	17-May-2012		kwb		1. changed strclip() to NOT include the delimiters in the "outside" parts
+							2. various error fixes in startdebug(), dumparray(), SubWindow.show()
+
+	30-May-2012		kwb		1. added insertnode()
+							2. added optional noreplace param to MergeObject()
+
+	27-Jun-2012		kwb		added support for intervals to the Timer object
+
+	26-Jul-2012		kwb		added date_field() and format_date()
+
+	11-Sep-2012		kwb		improved strclip() to better handle missing delimiters
+
+	14-Sep-2012		kwb		added json_parse() wrapper function
+
+	26-Nov-2012		kwb		improved getvalue() to check for <select>.value
+
+	17-Dec-2012		kwb		1. improved set_cookie() to allow validpath = true to indicate the current document path
+							2. improved DiffObject() to allow null objects to be compared
+							3. treated empty <select>.value same as null in getvalue() to support old browsers
+							4. added search_table()
+							5. improved setpos() to support relative offsetParent positions
+
+	10-Jan-2013		kwb		added new optional arg defaultall to strclip() to control behavior when start_delim is missing
+
+	15-Jan-2013		kwb		1. handled null input in decode(), htmlentities() and htmlentities_decode()
+							2. changed strclip() to use a single 'flags' param instead of booleans for options
+								with added option flag for allowing delimiters to match in all uppercase
+							3. improved setradiovalue() to uncheck the current selection if the new value is not found
+							4. allowed resizeimg() to allow the image to finish rendering
+
+	25-Jan-2013		kwb		added flag 16 to SubWindow_displaypage() to prevent it from becoming visible
+
+	28-Mar-2013		kwb		added str_format()
+
+	29-Mar-2013		kwb		handled empty string or null input to json_parse()
+
+	1-May-2013		kwb		added make_datetime()
+
+	15-May-2013		kwb		1. handled null input in New_SubWindow()
+							2. removed the MSIE-only hidden <iframe> from the SubWindow class since it's no longer needed
+							3. added global var _MSIE_version, and correctly detected support for table display styles
+
+	22-May-2013		kwb		handled NULL object input to setvalue()
+
+	18-Jun-2013		kwb		1. added check_number(), check_string(), and check_date()
+							2. put back the select-one code in setvalue() since MSIE still has issues setting .value in some cases
+
+	25-Jun-2013		kwb		1. removed encoding of validpath in set_cookie() so it would work on Safari
+							2. added ErrorCheck() for handling PHP errors returned in JSON data
+							3. added dirname() and basename()
+
+	29-Jul-2013		kwb		1. added optional param to MakeCallback() to wrap the callback in setTimeout()
+							2. changed SetEventHandler() to use .attachEvent() over .addEventListener() for better MSIE compatibility
+							3. changed set_cookie() default for validpath to the current document
+
+	16-Aug-2013		kwb		added strip_tags()
+
+	30-Aug-2013		kwb		added CleanArray()
+
+	3-Jan-2014		kwb		prevented class Timer from attempting to start a timer/interval with a negative timeout
+
+	24-Jan-2014		kwb		fixed reveal_node() to correctly show the top of the node when its bottom edge is out of view
+
+	30-Jan-2014		kwb		added special case to SetEventHandler() to handle <object> tags in MSIE 11
+
+	17-Feb-2014		kwb		added new type 'B' to keycode_type() for backspace and delete
+
+	06-Mar-2014		cxv		added addClass, removeClass, toggleClass, and hasClass functions
+
+	28-Mar-2014		kwb		added correct browser detection of MSIE 11
+
+	15-Apr-2014		kwb		improved str_format() to allow custom delimiters and named tokens
+
+	18-Apr-2014		kwb		changed is_numeric() to return FALSE for empty strings
+
+	16-May-2014		cxv		added utf8_encode and utf8_decode functions
+
+	22-May-2014		cxv		added defer() function to defer a function until the call stack has cleared
+
+	10-Sep-2014		cxv		added once() function to create a function that only executes one time,
+							returning the value of the first call in subsequent calls
+
+	16-Sep-2014		cxv		define console if it is not already defined
+
+	3-Nov-2014		kwb		prevented str_format() from inserting placeholder string when the field value happens to be undefined
+
+	31-Dec-2014		cxv		added getQueryParam function
+
+	5-Feb-2015		cxv		Handle redirects in requestJson
+
+	24-Feb-2015		cxv		Add optional AJAX queue to requestJson function
+
+	30-Feb-2015		cxv		Add function to format Javascript date objects using Oracle date formats
+
+	13-May-2015		gwk		Added ability for requestJson() to create alert dialog based on data from server
+
+	15-May-2015		cxv		Added resolveEnabledByAttribute function to allow form elements to declaratively control
+							whether they are enabled or disabled depending on the value of other form elements
+
+	2-Jun-2015		cxv		Added memoize() function for in-memory caching
+
+	9-Jun-2015		cxv		Added ability to transform data before reporting it to a consumer
+							in requestJson
+
+	11-Jun-2015		cxv		Added debounce function (inspired by underscore.js source code)
+
+	17-Jun-2015		cxv		Added callback to requestJson to process the request before it is
+							sent to the server. Also added an example implementation of an OAuth
+							signature version of this callback.
+
+	23-Jul-2015		cxv		Added optional wait time to defer() function
+
+	29-Jul-2015		kwb		added version_compare()
+
+	10-Sep-2015		cxv		requestJson can now be used for non-JSON data types
+
+	29-Sep-2015		kwb		1. fixed JS error in str_format() when 2nd param is null
+							2. added optional callback param to ErrorCheck()
+							3. added checks to $() and get_element() to prevent a stack overflow when given a DOM node object
+
+	20-Oct-2015		kwb		added exif_extract() and exif_orient() to parse EXIF tags from JPEG image data
+
+	10-Dec-2015		kwb		added polyfill for Array.isArray
+
+	30-Dec-2015		kwb		1. added getBoundingDocumentRect() and getBoundingWindowRect() and SliceObject()
+							2. improved reveal_node() to also scroll horizontally
+
+	25-Jan-2016		kwb		improved reveal_node() to allow the center and/or viewpos params to be skipped based on data type
+
+	10-Feb-2016		kwb		1. added optional param to getBoundingDocumentRect() and getBoundingWindowRect() to specify the window to use
+							2. improved reveal_node() to use the window that contains the element instead of the current window
+							3. added RemoveEventHandler()
+
+	8-Mar-2016		kwb		improved parse_date() to better support date formats without all the time fields
+
+	5-Apr-2016		kwb		1. added function clamp() to easily bound a number within a range
+							2. added function isDomNode() to safely check if an object is a DOM Node
+
+	26-Apr-2016		kwb		1. added support for date format fields 'g' and 'G' (hours without leading zeros)
+							2. improved parse_date() to allow time fields to be missing
+							3. improved parse_date() upon failure, to attempt to parse the date using the Date constructor
+
+	10-May-2016		kwb		improved findchild_class() to detect the target class on elements with multiples classes
+
+	20-May-2016		kwb		added CountProperties()
+
+	3-Jun-2016		kwb		added ExtractObject()
+
+	15-Jun-2016		kwb		allowed encode() to use native encoding methods when the string only contains ASCII characters
+
+	28-Jun-2016		kwb		improved to extract_string() so that both the opentag and closetag are optional
+
+	7-Jul-2016		kwb		1. added capitalize() to simply capitalize the first letter of a string
+							2. corrected handling of arrays in SliceObject() and ExtractObject()
+							3. corrected calculations in reveal_node() when the offsetParent is outside the frame element
+							4. added get_parent_window() to get the Window that contains a given element or document
+							5. added getWindowClientSize() to get the viewport size, EXCLUDING scroll bars
+							6. added getVisibleClientRect() to get the visible client region of an element
+
+	25-Jul-2016		kwb		added makeRequestData()
+
+	25-Aug-2016		kwb		added alert_deferred() to avoid blocking during an XHR or Promise callback
+
+	11-Oct-2016		kwb		added Object.defineMethod() to safely add methods to objects as non-enumerable members
+
+	26-Jan-2017		kwb		added enhanced version of classNames() - copied from classNames.js, which is now obsolete
+
+	21-Feb-2017		kwb		inverted strclip() behavior for flag 2, returning the whole string by default when no delims found
+							this allows the JSON debug delimiter to be optional without having to touch about 30 files
+
+	2-Mar-2017		kwb		corrected month values in parse_date() to account for zero-based month index in JS Date object
+
+	4-May-2017		kwb		1. moved EXIF functions to separate file exif.js
+							2. moved functions that use jQuery to jQfuncs.js
+							3. moved basic polyfills to global.js
+
+	14-Dec-2017		kwb		added support for web rule alert messages to ErrorCheck()
+
+	19-Jul-2018		kwb		updated CloneObject() to not set the prototype if already correct
+
+	31-Oct-2018		kwb		added parse_time() to parse human-friendly time strings, such as "9a" or "1730"
+
+	13-Feb-2019		kwb		corrected issues with parse_date() not converting field values to numbers
+
+	12-Jun-2019		kwb		corrected parse_date() to not offset to the previous month
+*/
+
+// mark this file as already included
+if ( window.__include != null )
+{
+	__include.depends( 'miscutil.js' );
+}
+
+// replace the $() from jQuery if already loaded
+if ( window.jQuery != null && window.j$ == null )
+{
+	// define j$() for jQuery alias
+	window.j$ = window.jQuery;
+}
+
+// assume mozilla styles if not Microsoft IE
+var _MSIE = ( navigator.appName == 'Microsoft Internet Explorer' );
+var _MSIE_version = navigator.userAgent.match( _MSIE ? /MSIE (\d+\.?\d*)/ : /Trident\/.* rv:([0-9]+[.0-9]*)/ );
+if ( _MSIE_version != null )
+{
+	_MSIE_version = parseFloat( _MSIE_version[1] ) || 0;
+	if ( _MSIE_version > 0 ) _MSIE = true;
+}
+var _tablevisible = 'table';
+var _rowvisible = 'table-row';
+var _colvisible = 'table-column';
+var _cellvisible = 'table-cell';
+if ( _MSIE && _MSIE_version < 8 )
+{
+	// table display styles are not supported in MSIE 7 or older
+	_tablevisible = 'block';
+	_rowvisible = 'block';
+	_colvisible = 'block';
+	_cellvisible = 'block';
+}
+
+var _dbg = null;							// handle to debug data object
+var _imagepath = 'images/';					// relative path to images directory
+
+// ********************************************************************************
+// debug functions
+// ********************************************************************************
+
+function echo( thetext )
+{
+	if ( _dbg )
+	{
+		_dbg.data += timestamp() + '  ' + thetext + "\n";
+		_dbg.timer.reset( 1 );
+	}
+}
+
+function startdebug()
+{
+	var dbglog = $( 'dbglog' );
+	if ( dbglog == null )
+	{
+		// create the dbglog object
+		document.writeln( '<textarea id="dbglog" rows="10" cols="80"></textarea>' );
+		dbglog = $( 'dbglog' );
+	}
+	_dbg = new DebugLog( dbglog );
+}
+
+function dumpobject( theobj )
+{
+	if ( ! _dbg ) return;
+
+	var i;
+
+	echo( 'begin dumpobject **********' );
+	for ( i in theobj )
+		echo( "\t" + i );
+	echo( 'end dumpobject **********' );
+}
+function dumpobject2( theobj )
+{
+	var i, txt = '';
+
+	for ( i in theobj )
+		if ( typeof theobj[i] != 'function' )
+			txt += i + ', ';
+	alert_deferred( txt );
+}
+
+function echoarray( thearray )
+{
+	if ( ! _dbg ) return;
+	echo( dumparray( thearray ) );
+}
+
+// object that holds the global debug vars
+function DebugLog( thetxtarea )
+{
+	// init the debug log
+	this.txt = thetxtarea;
+	this.txt.value = '';
+	this.data = '';
+
+	// init the log timer
+	var self = this;
+	this.timer = new Timer( function() { self.txt.value = self.data }, 200 );
+}
+
+// ********************************************************************************
+// utility functions
+// ********************************************************************************
+
+function doNothing()
+{
+	// empty function that does nothing
+}
+
+// safely attempts fetch an object member or return default value
+function nvx( obj, i, v )
+{
+	if ( obj == null || obj[i] == null ) return v;
+	return obj[i];
+}
+
+/*
+	nvl()
+
+	safely attempts fetch an object member or return default value
+	first argument = the main object
+	middle arguments = indexes of sub-objects
+	last argument = the default value
+*/
+function nvl( obj )
+{
+	var v, curr;
+	var n = arguments.length - 1;
+	v = ( arguments.length > 1 ) ? arguments[ n ] : null;
+	if ( obj == null ) return v;
+	if ( n == 1 ) return obj;
+
+	curr = obj;
+	for ( i = 1; i < n; i ++ )
+	{
+		// check each sub-object
+		if ( curr[ arguments[i] ] == null ) return v;
+		curr = curr[ arguments[i] ];
+	}
+	return curr;
+}
+
+// returns true if the value is false, zero, empty string, or empty array
+function empty( v )
+{
+	if ( v == null )
+		return true;
+
+	// check if scalar values are false
+	if ( typeof v != 'object' )
+		return ( v == false );
+
+	// check for length zero (empty array)
+	if ( v.length != null && v.length == 0 )
+		return true;
+
+	return false;
+}
+
+function clamp( v, min_val, max_val )
+{
+	if ( v < min_val ) return min_val;
+	if ( v > max_val ) return max_val;
+	return v;
+}
+
+// returns toString() of given value
+// if null, returns empty string
+// if boolean, returns '1' or '0'
+function to_string( v )
+{
+	if ( v == null ) return '';
+	if ( typeof v == 'boolean' ) return v ? '1' : '0';
+	if ( typeof v == 'object' ) return dumparray( v );
+	return v.toString();
+}
+
+function leftpad( thevalue, len, padchr )
+{
+	var str = '' + thevalue;
+	while ( str.length < len )
+		str = padchr + str;
+	return str;
+}
+
+/*
+	extract_string()
+
+	extracts everything between two substrings
+
+	if either opentag or closetag is omitted, the default is the beginning/end of the string
+	if whichPart is set, a different part of the string will be returned:
+		1 = part before the opentag
+		2 = part after the closetag
+	if reversed is true, then the string will be parsed backwards
+*/
+function extract_string( str, opentag, closetag, whichPart, reversed )
+{
+	if ( str == null ) return '';
+	if ( typeof str != 'string' ) str = String(str);
+	var a, b;
+
+	// find the opentag
+	a = ( opentag == null ) ? -1 : reversed ? str.lastIndexOf( opentag ) : str.indexOf( opentag );
+	if ( whichPart == 1 )
+	{
+		// return the part "before" the opentag
+		if ( a < 0 ) return str;
+		if ( reversed ) return str.substring( a + opentag.length );
+		return str.substring( 0, a );
+	}
+	if ( a < 0 )
+	{
+		// use the "beginning of the string" if opentag not found
+		a = ( reversed ) ? str.length : 0;
+	}
+	else if ( ! reversed )
+	{
+		a += opentag.length;
+	}
+
+	// find the closetag
+	b = ( closetag == null ) ? -1 : reversed ? str.lastIndexOf( closetag, a - 1 ) : str.indexOf( closetag, a );
+	if ( whichPart == 2 )
+	{
+		// return the part "after" the closetag
+		if ( b < 0 ) return '';
+		if ( reversed ) return str.substring( 0, b );
+		return str.substring( b + closetag.length );
+	}
+	if ( b < 0 )
+	{
+		// use the "end of the string" if closetag not found
+		b = ( reversed ) ? 0 : str.length;
+	}
+	else if ( reversed )
+	{
+		b += closetag.length;
+	}
+
+	// return the part between the opentag and closetag
+	if ( reversed ) return str.substring( b, a );
+	return str.substring( a, b );
+}
+
+function timestamp()
+{
+	var d = new Date();
+	return (
+		leftpad( d.getHours(), 2, '0' ) + ':' +
+		leftpad( d.getMinutes(), 2, '0' ) + ':' +
+		leftpad( d.getSeconds(), 2, '0' ) + '.' +
+		leftpad( d.getMilliseconds(), 3, '0' )
+	);
+}
+
+function basename( path )
+{
+	return path.replace( /.*[\/\\]/, '' );
+}
+
+function dirname( path )
+{
+	return path.replace( /\\/g, '/' ).replace( /\/[^\/]*$/, '' );
+}
+
+function capitalize( str )
+{
+	if ( ! str || typeof str != 'string' ) return str;
+	return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function str2hex( str )
+{
+	var hex = '';
+	var n = str.length;
+	var i, code;
+	for ( i = 0; i < n; i ++ )
+	{
+		code = str.charCodeAt(i);
+		if ( code < 16 ) hex += '0';
+		hex += code.toString(16).toUpperCase();
+	}
+	return hex;
+}
+
+function hex2str( hex )
+{
+	var str = '';
+	var n = hex.length;
+	var i, h;
+	for ( i = 0; i < n; i += 2 )
+	{
+		h = hex.substr( i, 2 );
+		h = parseInt( h, 16 );
+		str += String.fromCharCode( h );
+	}
+	return str;
+}
+
+// pads string with given char (default is spaces)
+// if len > 0 padding will be on right
+// if len < 0 padding will be on left
+function strpad( str, len, chr )
+{
+	var padleft = ( len < 0 );
+	if ( padleft ) len = -len;
+	if ( str.length >= len ) return str;
+
+	// build the padding string
+	var diff = len - str.length;
+	var pad = '';
+	if ( chr == null ) chr = ' ';
+	while ( pad.length < diff )
+		pad += chr;
+
+	// add the padding to the string
+	return padleft ? pad + str : str + pad;
+}
+
+/*
+	strclip()
+
+	extracts part of a string between start/end delimiter strings and returns the resulting substring
+
+	if either delim is null (or not found) then it will use the start/end of the whole string
+	if no delims are found then the whole string is always returned as part[1] by default
+	if flag 2 is set when no delims are found, and using a start_delim, then the entire string will be <before start>
+		the whole string will be part[0], and an empty string will be returned - without setting part[1]
+
+	if parts is set to an Array, it will be populated with all sections of the string:
+		[ <before start>, <between start/end>, <after end> ]
+	any parts that are missing will be undefined so the array indexes will always be the same
+	the delimiters will not be in any of the parts unless flag 1 is set
+
+	flags is a bit mask of option flags to affect the results
+		1 = include the delimiters in the result string
+		2 = when no delims are found, everything is <before start>
+		4 = allow matching delimiters in all upper case
+*/
+function strclip( str, start_delim, end_delim, flags, parts )
+{
+	var i, j, n;
+
+	if ( parts != null && typeof parts != 'object' )
+		parts = null;
+
+	// normalize any "empty" delimiters
+	if ( start_delim == '' ) start_delim = null;
+	if ( end_delim == '' ) end_delim = null;
+
+	if ( start_delim != null )
+	{
+		i = str.indexOf( start_delim );
+		if ( i < 0 && ( flags & 0x04 ) )
+			i = str.indexOf( start_delim.toUpperCase() );
+		if ( i >= 0 )
+		{
+			// clip the part before the start
+			n = ( flags & 0x01 ) ? i : i + start_delim.length;
+			if ( parts != null ) parts[0] = str.substr( 0, i );
+			str = str.substr( n );
+		}
+	}
+	else
+		i = -1;
+
+	if ( end_delim != null )
+	{
+		j = str.indexOf( end_delim );
+		if ( j < 0 && ( flags & 0x04 ) )
+			j = str.indexOf( end_delim.toUpperCase() );
+		if ( j >= 0 )
+		{
+			// clip the part after the end
+			n = ( flags & 0x01 ) ? j + end_delim.length : j;
+			var clip = str.substr( 0, n );
+			if ( parts != null )
+			{
+				parts[1] = clip;
+				parts[2] = str.substr( j + end_delim.length );
+			}
+			str = clip;
+		}
+	}
+	else
+		j = -1;
+
+	if ( j < 0 )
+	{
+		// end is missing or undefined
+		if ( i < 0 && start_delim != null && ( flags & 0x02 ) )
+		{
+			// start was requested but not found
+			if ( parts != null ) parts[0] = str;
+			str = '';
+		}
+		else if ( parts != null )
+			parts[1] = str;
+	}
+
+	return str;
+}
+
+/*
+	version_compare()
+
+	compares 2 version strings like '1.0.2'
+	number of dotted values can be different, missing ones are filled in with zeros
+
+	returns 0 if versions are equal
+	returns 1 if version va > vb
+	returns -1 if version va < vb
+*/
+function version_compare( va, vb )
+{
+	var a = va.split('.'), b = vb.split('.');
+	var n = Math.max( va.length, vb.length );
+	for( var i = 0; i < n; i++ )
+	{
+		var aa = parseInt( a[i], 10 ) || 0;
+		var bb = parseInt( b[i], 10 ) || 0;
+		if ( aa < bb ) return -1;
+		if ( aa > bb ) return 1;
+	}
+	return 0;
+}
+
+function encode( str )
+{
+	if ( str == null || str === '' ) return '';
+	if ( typeof str != 'string' )
+	{
+		switch ( typeof str )
+		{
+			case 'number' : return str.toString();
+			case 'boolean' : return str ? '1' : '0';
+			default: return '';
+		}
+	}
+	if ( 0 === str.search( /^[\x20-\x7E]*$/ ) )
+	{
+		// string only contains standard ASCII characters
+		if ( window.encodeURIComponent ) return encodeURIComponent( str );
+		if ( window.escape ) return escape( str );
+		return str;
+	}
+
+	var i, code, raw, enc;
+	var out = '';
+	var plaintxt = /[0-9A-Za-z-_.]/;
+	for ( i = 0; code = str.charCodeAt(i); i ++ )
+	{
+		raw = str.charAt(i);
+		if ( 0 <= raw.search( plaintxt ) )
+		{
+			// plain ascii char
+			enc = raw;
+		}
+		else if ( code <= 255 )
+		{
+			// special chars - convert to hex code
+			enc = code.toString(16).toUpperCase();
+			enc = ( ( enc.length == 1 ) ? '%0' : '%' ) + enc;
+		}
+		else // code > 255
+		{
+			// unicode - convert to html entity
+			var hi, lo;
+			// normally we encounter the high surrogate first
+			if (0xD800 <= code && code <= 0xDBFF)
+			{
+				hi  = code;
+				lo = str.charCodeAt(i+1);
+				// the next line will bend your mind a bit
+				code = ((hi - 0xD800) * 0x400) + (lo - 0xDC00) + 0x10000;
+				i++; // we already got low surrogate, so don't grab it again
+			}
+			// what happens if we get the low surrogate first?
+			else if (0xDC00 <= code && code <= 0xDFFF)
+			{
+				hi  = str.charCodeAt(i-1);
+				lo = code;
+				code = ((hi - 0xD800) * 0x400) + (lo - 0xDC00) + 0x10000;
+			}
+			// wrap it up as html entity
+			enc = '&#' + code + ';';
+			// now encode it to hex
+			enc = escape( enc );
+		}
+		out += enc;
+	}
+	return out;
+}
+
+function decode( uri )
+{
+	if ( uri == null ) return '';
+	uri = uri.replace( /\+/g, ' ' );
+	if ( window.decodeURIComponent ) return decodeURIComponent( uri );
+	if ( window.unescape ) return unescape( uri );
+	return uri;
+}
+
+function htmlentities( str )
+{
+	if ( str == null ) return '';
+	var x = { '<' : '&lt;', '>' : '&gt;', '&' : '&amp;', '"' : '&quot;' };
+	return str.replace( /[<>&\"]/g, function( c ) { return x[c] || c; } );
+}
+
+function htmlentities_decode( str )
+{
+	if ( str == null ) return '';
+	var x = { '&lt;' : '<', '&gt;' : '>', '&amp;' : '&', '&quot;' : '"' };
+	return str.replace( /&(lt|gt|amp|quot);/g, function( c ) { return x[c] || c; } );
+}
+
+function strip_tags( str )
+{
+	if ( str == null ) return '';
+	return str.replace( /(<([^>]+)>)/ig, '' );
+}
+
+/*
+	str_format()
+
+	use this to build strings similar to String.Format() in C#
+	example: str_format( 'hello {1} welcome to {2}', 'person', 'place' );
+	optionally, an object with any of these options may be provided:
+		delims = specify different delimiters instead of { and }
+			these should be together in a single string such as '<>' or '[]' or '||'
+		params = provide the replacement values in an object/array indexed by the placeholders
+			this is useful if named placeholders are used instead of numeric indexes
+*/
+function str_format( str, opt )
+{
+	var args = arguments;
+	if ( typeof opt == 'object' && opt != null )
+	{
+		// check for custom delimiters
+		var d1, d2;
+		if ( opt.delims != null )
+		{
+			d1 = opt.delims.charAt( 0 );
+			d2 = opt.delims.charAt( 1 );
+		}
+		else
+		{
+			d1 = '{'; d2 = '}';
+		}
+		// check for parameter object
+		if ( opt.params != null )
+		{
+			// use param names with custom delimiters
+			regex = new RegExp( '\\' + d1 + '([^\\' + d2 + ']+)\\' + d2, 'g' );
+			args = opt.params;
+			return str.replace( regex, function( match, param ) {
+			  return ( args[param] !== undefined ) ? args[param] : match;
+			});
+		}
+		else
+		{
+			// use numeric index with custom delimiters
+			regex = new RegExp( '\\' + d1 + '(\\d+)\\' + d2, 'g' );
+			// shift arguments since options are provided
+			args = CloneArray( args );
+			args.shift();
+		}
+	}
+	else
+	{
+		// use default syntax
+		regex = /{(\d+)}/g;
+	}
+	return str.replace( regex, function( match, number ) {
+		if ( number >= args.length ) return match;
+		return ( args[number] !== undefined ) ? args[number] : '';
+	} );
+}
+
+function json_parse( str )
+{
+	if ( str == null || str === '' )
+		return null;
+	if ( window.JSON != null )
+		return JSON.parse( str );
+
+	// fallback to old school method if JSON not defined
+	return eval( '(' + str + ')' );
+}
+
+function encode_array( arr, fldname )
+{
+	var s = '';
+	for ( var i in arr )
+	{
+		if ( arr[i] != null )
+		{
+			if ( typeof arr[i] == 'object' )
+				s += encode_array( arr[i], fldname + '[' + i + ']' );
+			else
+				s += fldname + '[' + i + ']=' + encode( arr[i] ) + '&';
+		}
+	}
+	return s;
+}
+
+// returns true if the array contains the requested value
+function search_array( arr, str, isassoc )
+{
+	if ( ! isassoc && Array.prototype.indexOf != null )
+		return 0 <= arr.indexOf( str );
+
+	for ( var i in arr )
+	{
+		if ( arr[i] == str ) return true;
+	}
+	return false;
+}
+
+// returns array index of matching element or -1 or null if not found
+function search_array_idx( arr, str, isassoc )
+{
+	if ( ! isassoc && Array.prototype.indexOf != null )
+		return arr.indexOf( str );
+
+	for ( var i in arr )
+	{
+		if ( arr[i] == str ) return i;
+	}
+	return ( isassoc ? null : -1 );
+}
+
+// returns index of array element that contains the requested property value
+// returns null if not found
+function search_table( arr, prop, str )
+{
+	for ( var i in arr )
+	{
+		if ( arr[i] && arr[i][prop] == str ) return i;
+	}
+	return null;
+}
+
+// returns true if the value is numeric
+// only types 'number' or 'string' may be numeric
+function is_numeric( val )
+{
+	if ( val == null || val === '' ) return false;
+	var t = typeof val;
+	if ( t == 'number' && isFinite( val ) ) return true;
+	if ( t != 'number' && t != 'string' ) return false;
+	if ( ! isNaN( val ) ) return true;
+	return false;
+}
+
+// returns true if the given email address is valid
+function validate_email( theaddress )
+{
+    var correct_format = "^.+\\@(\\[?)[a-zA-Z0-9\\-\\.]+\\.([a-zA-Z]{2,}|[0-9]+)(\\]?)$";
+    var incorrect_format = "(@.*@)|(\\.\\.)|(@\\.)|(\\.@)|(^\\.)";
+    var correct = new RegExp(correct_format);
+    var incorrect = new RegExp(incorrect_format);
+    if (!incorrect.test(theaddress) && correct.test(theaddress)) {
+      return true;
+    } else {
+	    return false;
+	}
+}
+
+/*
+	keycode_type()
+
+	returns true if the given keyCode is within the specified type(s)
+	each character in the type string represents of range of values
+
+	NOTE: these keyCode values only apply to keyPRESS events
+	keyDOWN and keyUP events use a different set of keyCode values
+*/
+function keycode_type( key, type )
+{
+	var idx = Math.floor( key / 32 );
+	var mask = 0;
+	for ( var i = 0; i < type.length; i ++ )
+	{
+		// add the selected range to the mask
+		switch ( type.charAt( i ) )
+		{
+		case 'A':		// alphabet [A-Z]
+			if ( idx == 2 ) mask |= 0x07FFFFFE;
+			break;
+
+		case 'D':		// digit [0-9] (NOT including numpad)
+			if ( idx == 1 ) mask |= 0x03FF0000;
+			break;
+
+		case 'd':		// numpad digits
+			if ( idx == 3 ) mask |= 0x000003FF;
+			break;
+
+		case 'N':		// alphanumeric (includes numpad digits)
+			switch ( idx )
+			{
+				case 1: mask |= 0x03FF0000; break;
+				case 2: mask |= 0x07FFFFFE; break;
+				case 3: mask |= 0x000003FF; break;
+			}
+			break;
+
+		case 'P':		// printable non-alphanumeric (punct)
+			switch ( idx )
+			{
+				case 1: mask |= 0x28000000; break;
+				case 3: mask |= 0x0000EC00; break;
+				case 5: mask |= 0xFC000000; break;
+				case 6: mask |= 0x78000001; break;
+			}
+			break;
+
+		case 'S':		// spacebar
+			if ( idx == 1 ) mask |= 1;
+			break;
+
+		case 'C':		// non-printable (control)
+			switch ( idx )
+			{
+				case 0: mask |= 0x081F2300; break;
+				case 1: mask |= 0x000061FE; break;
+				case 2: mask |= 0x38000000; break;
+				case 3: mask |= 0x0FFF0000; break;	// includes FKEYS
+				case 4: mask |= 0x00030000; break;
+			}
+			break;
+
+		case 'B':		// just backspace and delete
+			switch ( idx )
+			{
+				case 0: mask |= 0x00000100; break;
+				case 1: mask |= 0x00100000; break;
+			}
+
+		case 'F':		// function keys F1 - F12
+			if ( idx == 3 ) mask |= 0x0FFF0000;
+			break;
+		}
+	}
+
+	// check the keycode against the mask
+	return ( 0 != ( ( 1 << ( key % 32 ) ) & mask ) );
+}
+
+/*
+	str_to_obj()
+
+	converts a string into an object structure using the following syntax:
+		a( ) = makes a sub-object
+		a:123 = colon sets a leaf value
+		a:1,b:2 = comma separates sibling elements
+		a,b,c = uses default value if none specified
+		a:"w(x),y:z" = quoted strings treat symbols as literal
+		""abc"":123 = use double quotes for a literal quote
+*/
+function str_to_obj( thestr, defval )
+{
+	var obj = new Object();
+	var curr = obj;
+	var stack = new Array();
+	var elem = '', theval = '', thequote = '';
+	var stat = 0; // 0 = element name, 1 = element value, 2 = in quotes
+	var quote = -1;
+	var n = thestr.length;
+
+	// read each character
+	for ( var i = 0; i < n; i ++ )
+	{
+		var k = thestr.charAt( i );
+		if ( k == '"' || k == "'" )
+		{
+			// treat double quote as literal
+			if ( thestr.charAt( i + 1 ) != k )
+			{
+				// quoted string could be either name or value
+				if ( stat == 2 ) // end-quote
+				{
+					// append the quoted string
+					stat = quote;
+					quote = -1;
+					switch ( stat )
+					{
+					case 0: // element name
+						elem += thequote;
+						break;
+
+					case 1: // element value
+						theval += thequote;
+						break;
+					}
+				}
+				else // begin-quote
+				{
+					thequote = '';
+					quote = stat;
+					stat = 2;
+				}
+				continue;
+			}
+			else // literal quote character
+				i ++;
+		}
+		switch ( stat )
+		{
+		case 0: // element name
+			switch ( k )
+			{
+				case ' ':
+					// ignore spaces between elements
+					break;
+
+				case ':':
+					// start reading the value
+					stat = 1;
+					break;
+
+				case ',':
+					if ( elem != '' )
+					{
+						// put in the default value
+						curr[ elem ] = defval;
+						elem = theval = '';
+					}
+					break;
+
+				case '(': case '{':
+					// put in a sub-object
+					curr[ elem ] = new Object();
+					stack.push( curr );
+					curr = curr[ elem ];
+					elem = theval = '';
+					break;
+
+				case ')': case '}':
+					if ( elem != '' )
+					{
+						// put in the default value
+						curr[ elem ] = defval;
+						elem = theval = '';
+					}
+					// go back to prev object
+					curr = stack.pop();
+					if ( curr == null ) curr = obj;
+					break;
+
+				default:
+					elem += k;
+			}
+			break;
+
+		case 1: // element value
+			switch ( k )
+			{
+				case ',':
+					// put in the current value
+					curr[ elem ] = theval;
+					elem = theval = '';
+					stat = 0;
+					break;
+
+				case ')': case '}':
+					// put in the current value
+					curr[ elem ] = theval;
+					elem = theval = '';
+					stat = 0;
+					// go back to prev object
+					curr = stack.pop();
+					if ( curr == null ) curr = obj;
+					break;
+
+				case ' ':
+					// ignore leading spaces
+					if ( theval == '' ) break;
+
+				default:
+					theval += k;
+			}
+			break;
+
+		case 2: // in quotes
+			thequote += k;
+			break;
+
+		} // switch ( stat )
+	} // for ( i < n )
+
+	// finish any element in progress
+	if ( elem != '' )
+	{
+		curr[ elem ] = ( stat == 0 ) ? defval : theval;
+	}
+
+	return obj;
+}
+
+// returns an associative list of the GET params from the current URL
+// optional filter param can be string or array, and will cause only selected params to be returned
+// url-encoded values will be decoded
+function get_params( filter )
+{
+	// convert a comma-delimited filter string to an array
+	if ( filter != null && typeof filter == 'string' && filter.match( ',' ) != null )
+		filter = filter.split( ',' );
+
+	// parse the request string
+	var request = window.location.search.substring(1);
+	if ( request == null || request == '' ) return null;
+	var paramlist = request.split( '&' );
+	var params = {};
+	var n = 0;
+	for ( var i in paramlist )
+	{
+		var pair = paramlist[i].split( '=' );
+		if ( pair[0] == null ) continue;
+		pair[1] = decode( pair[1] );
+		if ( filter != null )
+		{
+			if ( typeof filter == 'string' )
+			{
+				// if single var requested, just return the value
+				if ( filter == pair[0] ) return pair[1];
+			}
+			else
+			{
+				// check if this param is in the filter
+				if ( search_array( filter, pair[0] ) )
+				{
+					params[ pair[0] ] = pair[1];
+					n ++;
+				}
+			}
+		}
+		else
+		{
+			params[ pair[0] ] = pair[1];
+			n ++;
+		}
+	}
+	return ( n > 0 ) ? params : null;
+}
+
+function isDomNode( obj )
+{
+	if ( typeof obj != 'object' ) return false;
+	if ( window.Node && obj instanceof Node ) return true;
+	return ( 'nodeType' in obj && 'parentNode' in obj );
+}
+
+function get_parent_window( obj )
+{
+	var doc;
+	if ( obj && typeof obj == 'object' )
+	{
+		try {
+			// can be either an element, document, or window
+			if ( obj instanceof Window ) return obj;
+			if ( obj instanceof HTMLDocument ) doc = obj;
+			else if ( isDomNode( obj ) ) doc = obj.ownerDocument;
+		} catch ( e ) {
+			window.console && console.warn( e );
+		}
+	}
+	return doc && ( doc.defaultView || doc.parentWindow );
+}
+
+/*
+	get_element()
+
+	gets the HTML element indicated by idstring
+	thearray (optional), will also recieve the element
+
+	the idstring can specify the array index to use in thearray using the format:
+		<index>:<elementid>
+	or even sub-arrays by adding multiple indexes:
+		<index>:<sub-index>:<elementid>
+	if idstring is actually an object, then the property names will be used instead
+		{ <index> : <elementid> }
+	using sub-objects are also supported
+		{ <index> : { <sub-index> : <elementid> } }
+*/
+function get_element( idstring, thearray )
+{
+	var i, idx, element;
+
+	if ( ! idstring ) return null;
+
+	if ( typeof idstring == 'object' )
+	{
+		// make sure this is not already a DOM node
+		if ( isDomNode( idstring ) )
+			return idstring;
+
+		// create a new array if none was provided
+		if ( thearray == null ) thearray = new Array();
+
+		// object arguments will use property names or indexes instead of delimited strings
+		for ( idx in idstring )
+		{
+			if ( typeof idstring[idx] == 'object' )
+			{
+				// go down into a sub-array
+				if ( ! thearray[idx] ) thearray[idx] = new Array();
+				get_element( idstring[idx], thearray[idx] );
+			}
+			else
+			{
+				// add the element to thearray
+				element = document.getElementById( idstring[idx] );
+				if ( ! element ) element = null;
+				thearray[idx] = element;
+			}
+		}
+		return thearray;
+	}
+
+	// idstring is a string
+	i = idstring.indexOf( ':' );
+	if ( i >= 0 )
+	{
+		idx = ( i > 0 ) ? idstring.slice( 0, i ) : null;
+		idstring = idstring.slice( i + 1 );
+		i = idstring.indexOf( ':' );
+		if ( idx && i >= 0 )
+		{
+			// go down into a sub-array
+			if ( ! thearray[idx] ) thearray[idx] = new Array();
+			return get_element( idstring, thearray[idx] );
+		}
+	}
+	element = document.getElementById( idstring );
+	if ( ! element ) element = null;
+
+	if ( thearray )
+	{
+		// add the element to thearray
+		if ( idx )
+			thearray[idx] = element;
+		else
+			thearray.push( element );
+	}
+
+	return element;
+}
+
+// ignore the fact that there are no arguments to this method -- javascript doesn't care how many you send (not strongly typed)
+// The method checks the actual # of arguments -- returns a single object or an array
+function $()
+{
+	var element;
+	if ( arguments.length == 1 )
+	{
+		// return single element
+		if ( typeof arguments[0] == 'string' && 0 > arguments[0].indexOf( ':' ) )
+			return get_element( arguments[0] );
+
+		// make sure this is not already a DOM node
+		if ( isDomNode( arguments[0] ) )
+			return arguments[0];
+	}
+	if ( arguments.length > 0 )
+	{
+		// return mapping object with multiple elements
+		var elements = new Array();
+		for ( var i = 0; i < arguments.length; i ++ )
+		{
+			get_element( arguments[i], elements );
+		}
+		return elements;
+	}
+}
+
+// child: rel = 1;  sibling: rel = 0;  parent: rel = -1
+// can get previous siblings if n is negative
+function getnode( thenode, rel, n )
+{
+	if ( ! thenode ) return null;
+
+	var fwd;
+
+	// n is optional, default to 1
+	if ( n == null ) n = 1;
+	// default relation is sibling
+	if ( rel == null ) rel = 0;
+
+	// check if n is negative
+	fwd = ( n >= 0 );
+	if ( ! fwd )
+	{
+		n = -n;
+		if ( rel != 0 )
+			fwd = true;
+	}
+
+	// traverse the DOM nodes
+	while ( n > 0 )
+	{
+		switch ( rel )
+		{
+		case -1: thenode = thenode.parentNode; break;
+		case 0: thenode = fwd ? thenode.nextSibling : thenode.previousSibling; break;
+		case 1: thenode = thenode.firstChild; break;
+		default: return null;
+		}
+		if ( thenode == null )
+			return null;
+		while ( thenode != null && thenode.nodeType != 1 )
+		{
+			// some browsers add a text node with nodeType = 3
+			thenode = fwd ? thenode.nextSibling : thenode.previousSibling;
+		}
+		n --;
+	}
+
+	return thenode;
+}
+
+// finds a relative node by tagName
+function findnode( thenode, thetag, rel )
+{
+	var startnode = thenode;
+	if ( thenode )
+		do { thenode = getnode( thenode, rel ); }
+			while ( thenode && thenode.tagName.toLowerCase() != thetag );
+	if ( ! thenode && rel == 0 )
+	{
+		// try searching previous siblings
+		thenode = startnode;
+		do { thenode = getnode( thenode, rel, -1 ); }
+			while ( thenode && thenode.tagName.toLowerCase() != thetag );
+	}
+	return ( thenode ? thenode : null );
+}
+
+// finds child node using the provided function
+function findchild_ex( thenode, thefunc )
+{
+	if ( thefunc( thenode ) )
+		return thenode;
+
+	var curr = getnode( thenode, 1 );
+	while ( curr )
+	{
+		var z = findchild_ex( curr, thefunc );
+		if ( z ) return z;
+		curr = getnode( curr, 0 );
+	}
+}
+
+/*
+	findchildren_ex()
+
+	returns an array of selected child nodes that gets populated by provided function
+	if there are nested elements that match, only the outermost will be included
+	the arr param is used by the callback to store the results, set to false to ignore
+*/
+function findchildren_ex( thenode, thefunc, arr )
+{
+	if ( arr == null )
+		arr = new Array();
+
+	if ( ! thefunc( thenode, arr ) )
+	{
+		var curr = getnode( thenode, 1 );
+		while ( curr )
+		{
+			findchildren_ex( curr, thefunc, arr );
+			curr = getnode( curr, 0 );
+		}
+	}
+	return arr;
+}
+
+// finds child node with specified tagName or id
+function findchild( thenode, thetag, theid )
+{
+	return findchild_ex( thenode,
+		function ( xnode )
+		{
+			return xnode && (
+				( thetag && xnode.tagName && xnode.tagName.toLowerCase() == thetag ) ||
+				( theid && xnode.id && xnode.id == theid )
+			);
+		}
+	);
+}
+
+function findchild_class( thenode, thetag, theclass )
+{
+	return findchild_ex( thenode,
+		function ( xnode )
+		{
+			return xnode && (
+				xnode.tagName && xnode.tagName.toLowerCase() == thetag
+				&& ( ! theclass || (' '+xnode.className).indexOf( ' '+theclass ) >= 0 )
+			);
+		}
+	);
+}
+
+// returns child node with specified attribute
+// and optionally specified value and/or tagname
+function findchild_attr( thenode, theattr, thetag, theval )
+{
+	return findchild_ex( thenode,
+		function ( xnode )
+		{
+			if ( ! xnode || ( thetag && xnode.tagName.toLowerCase() != thetag ) )
+				return false;
+			var xattr = xnode.getAttribute( theattr );
+			return xattr && ( theval == null || xattr == theval );
+		}
+	);
+}
+
+// finds array of child nodes with specified tagName or id
+function findchildren( thenode, thetag, theid )
+{
+	return findchildren_ex( thenode,
+		function ( xnode, arr )
+		{
+			if ( xnode && (
+				( thetag && xnode.tagName && xnode.tagName.toLowerCase() == thetag ) ||
+				( theid && xnode.id && xnode.id == theid )
+			) )
+			{
+				arr.push( xnode );
+				return true;
+			}
+			return false;
+		}
+	);
+}
+
+function removenode( thenode, parent )
+{
+	if ( ! parent ) parent = getnode( thenode, -1 );
+	parent.removeChild( thenode );
+}
+
+// inserts thenode either before or after refnode
+function insertnode( thenode, refnode, after, parent )
+{
+	if ( ! parent ) parent = getnode( refnode, -1 );
+	if ( after )
+	{
+		var nextnode = getnode( refnode );
+		if ( nextnode != null )
+			parent.insertBefore( thenode, nextnode );
+		else
+			parent.appendChild( thenode );
+	}
+	else
+	{
+		// insert before first child if refnode is empty
+		if ( refnode == null ) refnode = getnode( parent, 1 );
+		parent.insertBefore( thenode, refnode );
+	}
+}
+
+// clones all visible non-prototype members of an object
+// if deepcopy is set, any object members will also be cloned
+// returns the new object clone
+function CloneObject( theobj, deepcopy )
+{
+	if ( theobj == null ) return null;
+
+	// make new instance of the object
+	var theclone, proto;
+	if ( Array.isArray( theobj ) )
+	{
+		// clone arrays as actual arrays
+		theclone = new Array;
+	}
+	else
+	{
+		// clone objects as the same type without executing the constructor
+		theclone = new Object;
+		proto = Object.getPrototypeOf( theobj );
+		if ( proto !== Object.prototype ) Object.setPrototypeOf( theclone, proto );
+	}
+	for ( var i in theobj )
+	{
+		// only copy non-prototype members
+		if ( theobj.hasOwnProperty( i ) )
+		{
+			if ( deepcopy && theobj[i] != null && typeof theobj[i] == 'object' )
+				theclone[i] = CloneObject( theobj[i], true );
+			else
+				theclone[i] = theobj[i];
+		}
+	}
+	return theclone;
+}
+
+// performs a top-level clone of an array (shallow copy)
+// returns the new array clone
+function CloneArray( arr )
+{
+	var theclone = new Array();
+	for ( var i in arr )
+		theclone[i] = arr[i];
+	return theclone;
+}
+
+// removes all null/undefined elements from the given array
+function CleanArray( arr )
+{
+	if ( arr == null ) return null;
+	for ( var i = 0; i < arr.length; i ++ )
+	{
+		if ( arr[i] == null )
+		{
+			arr.splice( i, 1 );
+			i --;
+		}
+	}
+	return arr;
+}
+
+/*
+	compares 2 objects and returns true if they contain different values
+	by default only non-prototype scalar members that exist in both objects are compared
+	if exact is set, then both objects must have exactly the same members, including sub-objects
+	if shallow is set, then sub-objects will be ignored
+*/
+function DiffObject( a, b, exact, shallow )
+{
+	// first compare null-ness
+	if ( (a == null) != (b == null) ) return true;
+	if ( a == null && b == null ) return false;
+
+	// if both are non-null, then compare object members
+	if ( exact )
+	{
+		// compare all members in both objects
+		for ( var i in a )
+		{
+			// only compare non-prototype members
+			if ( ! a.hasOwnProperty( i ) )
+				continue;
+			// member must exist in both objects
+			if ( ! b.hasOwnProperty( i ) )
+				return true;
+
+			// must have same member structure and values
+			if ( ( typeof a[i] == 'object' ) != ( typeof b[i] == 'object' ) ) return true;
+			if ( typeof a[i] == 'object' )
+			{
+				// make sure sub-object is also the same
+				if ( ! shallow && DiffObject( a[i], b[i], true ) )
+					return true;
+			}
+			else if ( a[i] != b[i] )
+				return true;
+		}
+		for ( var i in b )
+		{
+			if ( b.hasOwnProperty( i ) && ! a.hasOwnProperty( i ) ) return true;
+		}
+	}
+	else
+	{
+		// only compare non-prototype scalar members that exist in both objects
+		for ( var i in a )
+		{
+			if ( a.hasOwnProperty( i ) && b.hasOwnProperty( i ) )
+			{
+				if ( ( typeof a[i] == 'object' ) != ( typeof b[i] == 'object' )
+					|| ( typeof a[i] != 'object' && a[i] != b[i] ) ) return true;
+			}
+		}
+	}
+
+	// objects are "the same"
+	return false;
+}
+
+// recursively merges non-prototype members from object b into object a
+// object a will be modified, object b will remain the same
+// object-type members being merged will be clones of the members from object b
+// byref = (optional) if set, object members are copied "by-ref" instead of a deep copy
+// noreplace = (optional) if set, any existing non-null members of object a will be preserved
+function MergeObject( a, b, byref, noreplace )
+{
+	if ( b == null || a == null || typeof a != 'object' || typeof b != 'object' )
+		return false;
+
+	for ( var p in b )
+	{
+		// only copy non-prototype members
+		if ( ! b.hasOwnProperty( p ) )
+			continue;
+		var t = ( b[p] != null && ! byref ) ? typeof b[p] : 'null';
+		if ( t == 'object' )
+		{
+			// recursively merge object members
+			if ( a[p] == null || typeof a[p] != 'object' )
+				a[p] = CloneObject( b[p], true );
+			else
+				MergeObject( a[p], b[p], false, noreplace );
+		}
+		else if ( ! noreplace || a[p] == null )
+		{
+			// shallow copy non-object values, or all members if byref
+			a[p] = b[p];
+		}
+	}
+	return true;
+}
+
+/*
+	SliceObject()
+
+	extracts specific properties from an object into a new object
+	this is a shallow copy only, so object-type members will be copied by reference
+	all additional args contain the list of property names to slice
+	if given an object, the names of all its non-prototype properties will be used
+	if given an array, the value of each element will be used
+*/
+function SliceObject( obj )
+{
+	if ( obj == null || typeof obj != 'object' )
+		return null;
+
+	var slice = new Object();
+	for ( var i = 1; i < arguments.length; i ++ )
+	{
+		var p = arguments[i];
+		if ( p == null ) continue;
+		if ( typeof p == 'object' )
+		{
+			var isa = p instanceof Array;
+			for ( var j in p )
+			{
+				if ( isa ) j = p[j];
+				if ( ( isa || p.hasOwnProperty( j ) ) && obj.hasOwnProperty( j ) )
+					slice[j] = obj[j];
+			}
+			continue;
+		}
+		if ( obj.hasOwnProperty( p ) )
+			slice[p] = obj[p];
+	}
+	return slice;
+}
+
+/*
+	ExtractObject()
+
+	extracts selected properties from a given object into a target object
+	this is a shallow copy only, so object-type members will be copied by reference
+	only extracts values that are not undefined, including prototype members
+	similar to SliceObject() all additional args specify which properties to extract
+
+	if the target object is null, then it will remain null until a proprty is added
+	makes no changes if no properties were extracted
+	returns the resuling target object
+*/
+function ExtractObject( obj, props )
+{
+	if ( typeof obj != 'object' )
+		return null;
+	if ( props == null || typeof props != 'object' )
+		return obj;
+
+	for ( var i = 2; i < arguments.length; i ++ )
+	{
+		var p = arguments[i];
+		if ( p == null ) continue;
+		if ( typeof p == 'object' )
+		{
+			var isa = p instanceof Array;
+			for ( var j in p )
+			{
+				if ( isa ) j = p[j];
+				if ( ( isa || p.hasOwnProperty( j ) ) && props[j] !== undefined )
+				{
+					if ( obj == null ) obj = new Object();
+					obj[j] = props[j];
+				}
+			}
+			continue;
+		}
+		if ( props[p] !== undefined )
+		{
+			if ( obj == null ) obj = new Object();
+			obj[p] = props[p];
+		}
+	}
+	return obj;
+}
+
+// returns the number of non-prototype properties in an Object, or the length of an Array
+function CountProperties( obj )
+{
+	var n = 0;
+	var otype = typeof obj;
+	if ( obj != null && ( otype == 'object' || otype == 'function' ) )
+	{
+		if ( Array.isArray( obj ) ) return obj.length;
+		for ( var i in obj )
+		{
+			if ( obj.hasOwnProperty( i ) ) n ++;
+		}
+	}
+	return n;
+}
+
+// returns current value of the requested cookie
+function get_cookie( thecookie )
+{
+	var v = document.cookie.match ( '(^|;) ?' + thecookie + '=([^;]*)(;|$)' );
+	if ( v ) return decode( v[2] );
+	return null;
+}
+
+/*
+	set_cookie()
+
+	sets a cookie, only first 2 params are required
+	values are url-encoded by this function, do not pre-encode them
+
+	expdate can be a Date object with a specific date
+	or a numeric offset in seconds from the current time
+
+	if validpath === true or null, then the current document path is used
+	if validpath === false, then it will just use "path=/" for the whole domain
+*/
+function set_cookie( thecookie, thevalue, expdate, validpath, validdomain, onlysecure )
+{
+	var cs = thecookie + '=' + encode( thevalue );
+
+	if ( expdate != null )
+	{
+		if ( is_numeric( expdate ) )
+		{
+			// offset in seconds from right now
+			var et = new Date();
+			et.setTime( et.getTime() + expdate * 1000 );
+			expdate = et;
+		}
+		if ( typeof expdate == 'object' )
+		{
+			// convert given date to GMT
+			cs += '; expires=' + expdate.toGMTString();
+		}
+	}
+
+	// valid path
+	if ( validpath == null || validpath === true )
+		cs += '; path=' + dirname( window.location.pathname ) + '/';
+	else if ( ! validpath )
+		cs += '; path=/';
+	else
+		cs += '; path=' + validpath;
+
+	// valid domain
+	if ( validdomain != null )
+		cs += '; domain=' + validdomain;
+
+	// secure option
+	if ( onlysecure )
+		cs += '; secure';
+
+	document.cookie = cs;
+}
+
+// deletes the requested cookie
+function delete_cookie( thecookie, validpath )
+{
+	// set the value to blank and expire the cookie
+	var et = new Date();
+	et.setTime( et.getTime() - 1 );
+	var cs = thecookie += '=; expires=' + et.toGMTString();
+
+	// apply the valid path if one is given
+	if ( validpath === true )
+		cs += '; path=' + dirname( window.location.pathname ) + '/';
+	else if ( validpath != null )
+		cs += '; path=' + validpath;
+
+	document.cookie = cs;
+}
+
+/*
+	togglerow()
+
+	shows or hides the next row in the table
+	use this HTML construct:
+
+	<tr><td>
+		<a href="javascript:void(0)" onClick="togglerow( this )">toggle</a>
+	</td></tr>
+	<tr><td>
+		CONTENT TO SHOW/HIDE
+	</td></tr>
+
+	to use a "folder" icon that changes when toggled, provide the imgopen and imgclosed params
+	the <img> tag should be the first child of the <a> tag
+
+	thelink = html object of the <a> tag used to call this function
+	imgopen = (optional) source url of image to show for "folder open"
+	imgclosed = (optional) source url of image to show for "folder closed"
+	numrows = (optional) number of rows to toggle (default = 1, use -1 for all)
+*/
+function togglerow( thelink, imgopen, imgclosed, numrows )
+{
+	var therow;
+	var isvisible;
+	var i;
+
+	// get the dynamic row
+	therow = getnode( thelink, -1, 2 );			// grandparent of <thelink> = <curr row>
+	therow = getnode( therow, 0 );				// sibling of <curr row> = <next row>
+	isvisible = ( therow.style.display != 'none' );
+
+	// update the folder icon
+	if ( imgopen )
+	{
+		var theimg = getnode( thelink, 1 );
+		theimg.src = ( isvisible ? imgclosed : imgopen );
+	}
+
+	// show or hide the row(s)
+	isvisible = ( isvisible ? 'none' : _rowvisible );
+	therow.style.display = isvisible;
+	if ( numrows == null || numrows == 1 )
+		return;
+
+	if ( numrows > 0 )
+	{
+		for ( i = 1; i < numrows; i ++ )
+		{
+			therow = getnode( therow, 0 ); // get next row
+			if ( ! therow ) break;
+			therow.style.display = isvisible;
+		}
+	}
+	else
+	{
+		// toggle all remaining rows
+		therow = getnode( therow, 0 ); // get next row
+		while ( therow )
+		{
+			therow.style.display = isvisible;
+			therow = getnode( therow, 0 ); // get next row
+		}
+	}
+}
+
+// performs an alert() after the current microtask is completed, such as an XHR or Promise callback
+function alert_deferred( msg, alertFunc )
+{
+	if ( typeof alertFunc == 'string' ) alertFunc = window[ alertFunc ];
+	if ( ! alertFunc ) alertFunc = window.alert;
+	setTimeout( function() {
+		alertFunc( msg );
+	} );
+}
+
+// use this to stop processing an event
+function cancel_event( e )
+{
+	// stop the event chain
+	if ( ! e ) e = window.event;
+	if ( e )
+	{
+		e.cancelBubble = true;
+		if ( e.preventDefault )
+		{
+			e.preventDefault();
+			e.stopPropagation();
+		}
+		else
+			e.returnValue = false;
+	}
+}
+
+/*
+	resizeimg()
+
+	resizes an <img> object to fill the desired area while maintaining its aspect ratio
+	and without extending beyond the requested dimensions
+
+	alternative usage: resizeimg( theimg, theframe )
+	this will use the offsetHeight and offsetWidth of theframe instead of thewidth and theheight
+*/
+function resizeimg( theimg, thewidth, theheight, retry )
+{
+	if ( ! theimg || ! thewidth ) return;
+
+	//console.log( 'resizeimg: ' + theimg.offsetWidth + ' x ' + theimg.offsetHeight + ' ' + theimg.complete );
+	if ( ! retry && ( ! theimg.complete || theimg.offsetWidth == 0 ) )
+	{
+		// give the image a chance to finish loading
+		theimg.onload = function() { resizeimg( theimg, thewidth, theheight, true ); };
+		if ( theimg.complete ) setTimeout( theimg.onload );
+		return;
+	}
+
+	if ( typeof thewidth == 'object' )
+	{
+		var theframe = thewidth;
+		thewidth = theframe.offsetWidth;
+		theheight = theframe.offsetHeight;
+	}
+
+	// compare the aspect ratio with the desired size
+	if ( theimg.offsetWidth / theimg.offsetHeight > thewidth / theheight )
+	{
+		theimg.style.width = thewidth + 'px';
+		theimg.style.height = null;
+	}
+	else
+	{
+		theimg.style.width = null;
+		theimg.style.height = theheight + 'px';
+	}
+}
+
+// gets the value of the selected radio button in a group
+function getradiovalue( thegroupname )
+{
+	var thegroup = document.getElementsByName( thegroupname );
+
+	if ( thegroup.length )
+	{
+		// check each member of the group
+		for( var i = 0; i < thegroup.length; i ++ )
+		{
+			if ( thegroup[i].checked ) return thegroup[i].value;
+		}
+	}
+	else if ( thegroup.checked )
+		return thegroup.value;
+
+	return null;
+}
+
+// selects the radio button with the given value
+function setradiovalue( thegroupname, thevalue )
+{
+	var thegroup = document.getElementsByName( thegroupname );
+
+	if ( thegroup.length )
+	{
+		// check each member of the group
+		var rdx = -1;
+		for ( var i = 0; i < thegroup.length; i ++ )
+		{
+			if ( thegroup[i].checked )
+				rdx = i;
+			if ( thegroup[i].value == thevalue )
+			{
+				thegroup[i].checked = true;
+				break;
+			}
+		}
+		if ( rdx >= 0 && i >= thegroup.length )
+		{
+			// uncheck the current selection if not found
+			thegroup[rdx].checked = false;
+		}
+	}
+	else if ( thegroup.value == thevalue )
+		thegroup.checked = true;
+}
+
+// returns value of object, and 1 or 0 if checkbox
+// if the object is a <select> it gets the value (or text, if no value) of the currently selected item
+function getvalue( theobject )
+{
+	if ( theobject == null ) return '';
+
+	// if given a string, assume radio group
+	if ( typeof theobject == 'string' )
+		return getradiovalue( theobject );
+	else if ( theobject.type == 'checkbox' )
+		return ( theobject.checked ? 1 : 0 );
+	else if ( theobject.type == 'select-one' )
+	{
+		// get value of selected menu item
+		if ( theobject.value != null && theobject.value !== '' )
+			return theobject.value;
+		else if ( theobject.options.selectedIndex >= 0 )
+		{
+			var x = theobject.options[ theobject.options.selectedIndex ];
+			return ( ( x.value != null && x.value !== '' ) ? x.value : x.text );
+		}
+		else
+			return '';
+	}
+	else if ( theobject.type )
+		return theobject.value;
+
+	return theobject.innerHTML;
+}
+
+// sets the value of the object, based on the object type
+function setvalue( theobject, thevalue )
+{
+	if ( theobject == null ) return;
+
+	if ( typeof theobject == 'string' )
+	{
+		// if given a string, assume radio group
+		setradiovalue( theobject, thevalue );
+	}
+	else if ( theobject.tagName != null )
+	{
+		// write values to HTML elements
+		if ( theobject.type == 'checkbox' )
+			theobject.checked = ( thevalue != 0 );
+		else if ( theobject.type == 'select-one' )
+		{
+			var i,x;
+			for ( i = 0; i < theobject.options.length; i ++ )
+			{
+				// search for matching menu item
+				x = theobject.options[i];
+				if ( ( x.value != null && x.value == thevalue ) || ( x.value == null && x.text == thevalue ) )
+				{
+					theobject.selectedIndex = i;
+					break;
+				}
+			}
+			// select none if no match was found
+			if ( i >= theobject.options.length )
+				theobject.selectedIndex = -1;
+		}
+		else if ( theobject.type )
+			theobject.value = thevalue;
+		else
+			theobject.innerHTML = thevalue;
+	}
+}
+
+// returns a text dump of an array or object structure
+function dumparray( thearray, thelevel )
+{
+	var xtext, xlevel, i;
+
+	xlevel = '';
+	if ( ! thelevel ) thelevel = 0;
+	for ( i = 0; i < thelevel; i ++ )
+		xlevel += '    ';
+
+	xtext = '{';
+	for ( i in thearray )
+	{
+		if ( thearray.hasOwnProperty( i ) )
+		{
+			if ( thearray[i] != null && typeof thearray[i] == 'object' )
+			{
+				// dump sub array
+				xtext += "\n" + xlevel + '    [' + i + '] => ';
+				xtext += ( thelevel < 10 ) ? dumparray( thearray[i], thelevel + 1 ) : '...';
+			}
+			else
+				xtext += "\n" + xlevel + '    [' + i + '] => [' + thearray[i] + ']';
+		}
+	}
+	xtext += "\n" + xlevel + '}';
+
+	return xtext;
+}
+
+/*
+	date_field()
+
+	returns date field value in standard format
+	field is indicated based on subset of PHP date format tokens:
+		d : day of month, 2 digits			01 - 31
+		D : weekday name, 3 letters			Mon - Sun
+		l : weekday name, full				Monday - Sunday
+		m : month number, 2 digits			1 - 12
+		M : month name, 3 letters			Jan - Dec
+		F : month name, full				January - December
+		Y : year, 4 digits					ie- 1989, 2005
+		y : year, 2 digits					ie- 89, 05
+		g : hour of 12, unpadded			1 - 12
+		h : hour of 12, 2 digits			01 - 12
+		G : hour of 24, unpadded			0 - 23
+		H : hour of 24, 2 digits			00 - 23
+		i : minutes, 2 digits				0 - 59
+		s : seconds, 2 digits				0 - 59
+		a : AM/PM, lowercase				am or pm
+		A : AM/PM, uppercase				AM or PM
+*/
+function date_field( dt, fld )
+{
+	var pad, val;
+	switch ( fld )
+	{
+	case 'd': val = dt.getDate(); pad = true;					break;		// day of month, 01 - 31
+	case 'D': val = date_field.day_abbr[ dt.getDay() ];			break;		// day of week, Mon - Sun
+	case 'l': val = date_field.day_names[ dt.getDay() ];		break;		// day of week, Monday - Sunday
+	case 'm': val = dt.getMonth() + 1; pad = true;				break;		// month, 01 - 12
+	case 'M': val = date_field.month_abbr[ dt.getMonth() ];		break;		// month, Jan - Dec
+	case 'F': val = date_field.month_names[ dt.getMonth() ];	break;		// month, January - December
+	case 'Y': val = dt.getFullYear();							break;		// year, 4 digits
+	case 'y': val = dt.getFullYear() % 100; pad = true;			break;		// year, 2 digits
+	case 'g': case 'h':
+		val = ( dt.getHours() % 12 ) || 12; pad = (fld=='h');	break;		// hours, 1 - 12 or 01 - 12
+	case 'G': case 'H':
+		val = dt.getHours(); pad = (fld=='H');					break;		// hours, 0 - 23 or 00 - 23
+	case 'i': val = dt.getMinutes(); pad = true;				break;		// minutes, 00 - 59
+	case 's': val = dt.getSeconds(); pad = true;				break;		// seconds, 00 - 59
+	case 'a': case 'A':
+		val = date_field.ampm[ dt.getHours() >= 12 && 1 || 0 ];
+		if ( fld == 'a' ) val = val.toLowerCase();				break;		// am / pm or AM / PM
+	default: val = fld;											break;
+	}
+	if ( pad && val < 10 ) val = '0' + val;
+	return val;
+}
+date_field.day_abbr = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+date_field.day_names = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+date_field.month_abbr = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+date_field.month_names = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+date_field.ampm = [ 'AM', 'PM' ];
+
+
+// formats a Date object into a string using a date format expression
+// the date format uses a subset of the PHP date format tokens
+function format_date( dt, fmt )
+{
+	if ( typeof fmt != 'string' || fmt === '' ) return '';
+
+	var i, k;
+	var out = '';
+	for ( i = 0; k = fmt.charAt(i); i ++ )
+	{
+		out += date_field( dt, k );
+	}
+	return out;
+}
+
+// returns the numeric portion of a string, optionally with an integer value between min and/or max
+// returns false if string starts with non-numeric or value is out of bounds
+// len indicates an exact required length of the numeric string
+// any non-numeric characters at the end of the string will be ignored
+function check_number( txt, min, max, len )
+{
+	// extract the numeric portion of the string
+	var val = txt.match( /^\d+/ );
+	if ( val == null || val[0] == null ) return false;
+	val = val[0];
+
+	if ( len != null && val.length != len )
+		return false;
+
+	// check if the number is within range
+	if ( min != null || max != null )
+	{
+		var n = parseInt( val );
+		if ( min != null && n < min || max != null && n > max )
+			return false;
+	}
+
+	// return the numeric string
+	return val;
+}
+
+// returns the first word of a string that matches a string in a list
+// returns false if no match is found
+// if list is null, then only the regex will be checked
+// if matchCase is set, then the list matching will be case-sensitive
+// if regExp is set, then it will be used instead of the default "first word" regex
+// if getIdx is set, then it will return the matching index in the list instead
+function check_string( txt, list, matchCase, regExp, getIdx )
+{
+	// extract the first word (or custom regex) from the string
+	if ( regExp == null ) regExp = /^\w+/;
+	var val = txt.match( regExp );
+	if ( val == null || val[0] == null ) return false;
+	val = val[0];
+	if ( list == null ) return val;
+
+	// check if the word matches a string in the list
+	var s = matchCase ? val : val.toLowerCase();
+	for ( var i in list )
+	{
+		var m = list[i];
+		if ( typeof m != 'string' ) m = String( m );
+		if ( ! matchCase ) m = m.toLowerCase();
+		if ( s === m ) return getIdx ? i : val;
+	}
+	return false;
+}
+
+// parses an input string using a PHP date format
+// returns the resulting Date object if successful, else false
+// if strict is not set, then when otherwise unable to parse, it will attempt to use the Date constructor
+function parse_date( txt, fmt, strict )
+{
+	var d;
+	if ( typeof fmt == 'string' && fmt !== '' )
+	{
+		var i, j, fld, val;
+		var n = txt.length;
+		d = { hour: 0, min: 0, sec: 0 };
+		for ( i = 0, j = 0; j < n && ( fld = fmt.charAt(i) ); i ++ )
+		{
+			switch ( fld )
+			{
+			case 'd': // day of month, 01 - 31
+				val = check_number( txt.substr( j, 2 ), 1, 31 );
+				d.day = Number( val );
+				break;
+			case 'D': // day of week, Mon - Sun
+				val = check_string( txt.substr( j, 3 ), date_field.day_abbr, false, /^[A-Z]{3}/i );
+				break;
+			case 'l': // day of week, Monday - Sunday
+				val = check_string( txt.substr( j, 15 ), date_field.day_names, false, /^[A-Z]{3,15}/i );
+				break;
+			case 'm': // month, 01 - 12
+				val = check_number( txt.substr( j, 2 ), 1, 12 );
+				d.month = Number( val ) - 1;
+				break;
+			case 'M': // month, Jan - Dec
+				val = check_string( txt.substr( j, 3 ), date_field.month_abbr, false, /^[A-Z]{3}/i, true );
+				if ( val !== false )
+				{
+					d.month = Number( val );
+					val = date_field.month_abbr[ val ];
+				}
+				break;
+			case 'F': // month, January - December
+				val = check_string( txt.substr( j, 15 ), date_field.month_names, false, /^[A-Z]{3,15}/i, true );
+				if ( val !== false )
+				{
+					d.month = Number( val );
+					val = date_field.month_names[ val ];
+				}
+				break;
+			case 'Y': // year, 4 digits
+				val = check_number( txt.substr( j, 4 ), null, null, 4 );
+				d.year = Number( val );
+				break;
+			case 'y': // year, 2 digits
+				val = check_number( txt.substr( j, 2 ), null, null, 2 );
+				d.year = Number( val );
+				break;
+			case 'g': // hours, 1 - 12
+			case 'h': // hours, 01 - 12
+				val = check_number( txt.substr( j, 2 ), 1, 12 );
+				d.hour12 = Number( val );
+				break;
+			case 'G': // hours, 0 - 23
+			case 'H': // hours, 00 - 23
+				val = check_number( txt.substr( j, 2 ), 0, 23 );
+				d.hour24 = Number( val );
+				break;
+			case 'i': // minutes, 00 - 59
+			case 's': // seconds, 00 - 59
+				val = check_number( txt.substr( j, 2 ), 0, 59 );
+				if ( fld == 'i' ) d.min = Number( val ); else d.sec = Number( val );
+				break;
+			case 'a': // am or pm
+			case 'A': // AM or PM
+				val = check_string( txt.substr( j, 2 ), date_field.ampm, false, /^[ap]m/i, true );
+				if ( val > 0 ) d.pm = true;
+				break;
+			default: val = fld;
+				break;
+			}
+			if ( val === false )
+			{
+				// string does not match date format
+				d = null;
+				break;
+			}
+			j += val.length;
+		}
+	}
+	if ( d != null )
+	{
+		if ( d.hour24 != null )
+		{
+			d.hour = d.hour24;
+		}
+		else if ( d.hour12 != null )
+		{
+			d.hour = d.hour12;
+			if ( d.pm )
+			{
+				if ( d.hour < 12 ) d.hour += 12;
+			}
+			else if ( d.hour == 12 )
+				d.hour = 0;
+		}
+		d = new Date( d.year, d.month, d.day, d.hour, d.min, d.sec );
+		if ( ! isNaN( d ) ) return d;
+	}
+	// the date string did not match the format
+	if ( strict ) return false;
+
+	// try to automatically parse the string as a last resort
+	d = new Date( txt );
+	return isNaN( d ) ? false : d;
+}
+
+// returns a new Date object with the date from one value and the time from another
+// if either input is null, then the current date or time will be used
+function make_datetime( thedate, thetime )
+{
+	if ( thedate == null ) thedate = new Date();
+	if ( typeof thetime == 'string' )
+		thetime = new Date( '1/1/1 ' + thetime );
+	else if ( thetime == null )
+		thetime = new Date();
+
+	return new Date( thedate.getFullYear(), thedate.getMonth(), thedate.getDate(),
+		thetime.getHours(), thetime.getMinutes(), thetime.getSeconds(), thetime.getMilliseconds() );
+}
+
+// returns an object with { hours, minutes } parsed from the given time string
+// allowing for various formats such as "3p" or "3 p.m." or "3:00p" or "1500" or "330P"
+function parse_time( t ) {
+	if ( ! t || typeof t != 'string' ) return false;
+	let m = t.match( /((\d?\d)\D*(\d\d)|(\d?\d))[^AP]*([AP]?)/i );
+	if ( ! m || ! m[1] ) return false;
+	let hh = m[2] || m[4];
+	let mm = m[3] || 0;
+	let ap = m[5];
+	hh = parseInt( hh ); mm = parseInt( mm );
+	if ( isNaN( hh ) || isNaN( mm ) || mm < 0 || mm > 59 ) return false;
+	if ( ap ) {
+		// 12-hour time format
+		if ( hh < 1 || hh > 12 ) return false;
+		if ( ap == 'P' || ap == 'p' ) {
+			// P.M.
+			if ( hh < 12 ) hh += 12;
+		} else {
+			// A.M.
+			if ( hh == 12 ) hh = 0;
+		}
+	} else {
+		// 24-hour time format
+		if ( hh < 0 || hh > 23 ) return false;
+	}
+	return { hours: hh, minutes: mm };
+}
+
+/*
+	reveal_node()
+
+	scrolls the frame/window to reveal the object
+	only the node param is required
+	center and/or viewpos may be skipped if not being used
+
+	if center is set, the node will centered in the frame
+	viewpos can be set to ALWAYS scroll the node to one edge/corner of the frame:
+		1 = top			5 = top left
+		2 = bottom		6 = top right
+		3 = left		7 = bottom left
+		4 = right		8 = bottom right
+	axis can be 'x' or 'y' to only scroll in one axis
+
+	normal scrolling will favor the top/left edges when the node is larger than the frame/window
+	if both axis are enabled (default), any non-viewpos axis will scroll normally
+	if both center and viewpos are enabled, any non-viewpos axis will be centered
+
+	note that the viewpos corner values are all ( 2 * [vertical] + [horizontal] )
+	such as 7[bottom left] = ( 2 * 2[bottom] + 3[left] )
+
+	if viewpos is negative, then it will ONLY scroll to the corresponding edge/corner, and ONLY when out of view
+	if viewpos = -1 (top) then:
+		scroll to the top of the node only if it's above the top of the view
+		ignores if the top or bottom is below the bottom of the view
+	if viewpos = -2 (bottom) then:
+		scroll to the bottom of the node only if it's below the bottom of the view
+		ignores if the top or bottom is above the top of the view
+*/
+function reveal_node( node, frame, center, viewpos, axis )
+{
+	if ( ! node ) return;
+	if ( arguments.length > 2 )
+	{
+		// resolve any skipped parameters based on data type
+		if ( axis == null )
+		{
+			var axisvals = 'xXyY';
+			if ( typeof center == 'string' && 0 <= axisvals.indexOf( center.charAt( 0 ) ) )
+			{
+				axis = center;
+				center = null;
+			}
+			else if ( typeof viewpos == 'string' && 0 <= axisvals.indexOf( viewpos.charAt( 0 ) ) )
+			{
+				axis = viewpos;
+				viewpos = null;
+			}
+		}
+		if ( typeof center == 'number' && typeof viewpos != 'number' )
+		{
+			viewpos = center;
+			center = false;
+		}
+	}
+	// scroll on both axis by default
+	var vert = true;
+	var horiz = true;
+	if ( axis && typeof axis == 'string' )
+	{
+		// restrict the axis
+		if ( axis.length > 1 ) axis = axis.charAt( 0 );
+		vert = ( axis != 'x' && axis != 'X' );
+		horiz = ( axis != 'y' && axis != 'Y' );
+	}
+
+	var framedoc, framewin, frameview;
+	if ( ! frame )
+	{
+		// use the whole document that contains the node
+		framedoc = node.ownerDocument;
+		framewin = framedoc.defaultView || framedoc.parentWindow;
+		frame = framedoc.body;
+		frameview = framedoc.documentElement || frame.parentNode;
+	}
+
+	// get the current scroll position
+	var scrollTop = frame.scrollTop, scrollLeft = frame.scrollLeft;
+	if ( framedoc && frame.scrollTop == 0 ) scrollTop = frameview.scrollTop;
+	if ( framedoc && frame.scrollLeft == 0 ) scrollLeft = frameview.scrollLeft;
+	var oldScrollTop = scrollTop, oldScrollLeft = scrollLeft;
+	var y = node.offsetTop, x = node.offsetLeft;
+	var h = node.offsetHeight, w = node.offsetWidth;
+	var viewHeight = frameview && frameview.clientHeight || frame.clientHeight;
+	var viewWidth = frameview && frameview.clientWidth || frame.clientWidth;
+
+	// get the offset top/left of the node with respect to the frame
+	var parent = node.offsetParent;
+	while ( parent && parent != frame && parent != frame.offsetParent )
+	{
+		y += parent.offsetTop;
+		x += parent.offsetLeft;
+		parent = parent.offsetParent;
+	}
+	if ( parent == frame.offsetParent )
+	{
+		// the offset parent is outside the frame element
+		y -= frame.offsetTop;
+		x -= frame.offsetLeft;
+	}
+
+	// check for negative viewpos
+	var res = ( viewpos < 0 );
+	if ( res ) viewpos = -viewpos;
+
+	// calculate the scroll position to reveal the node
+	var v, vv, rv;
+	if ( vert )
+	{
+		v = viewpos;
+		if ( viewpos == 5 || viewpos == 6 )
+			v = 1;
+		else if ( viewpos == 7 || viewpos == 8 )
+			v = 2;
+		if ( center && v != 1 && v != 2 )
+		{
+			// center the node vertically
+			scrollTop = y - ( viewHeight - h ) / 2;
+		}
+		else
+		{
+			vv = res ? 0 : v;
+			rv = res ? v : 0;
+			if ( v != 2 )
+			{
+				// make sure the top edge is in view
+				if ( vv == 1 || y < scrollTop || ( rv != 1 && y > scrollTop && h >= viewHeight ) )
+					scrollTop = y;
+			}
+			if ( v != 1 )
+			{
+				// make sure the bottom edge is in view
+				y += h;
+				if ( vv == 2 || ( y > scrollTop + viewHeight && ( rv == 2 || h < viewHeight ) ) )
+					scrollTop = y - viewHeight;
+			}
+		}
+	}
+	if ( horiz )
+	{
+		v = viewpos;
+		if ( viewpos == 5 || viewpos == 7 )
+			v = 3;
+		else if ( viewpos == 6 || viewpos == 8 )
+			v = 4;
+		if ( center && v != 3 && v != 4 )
+		{
+			// center the node horizontally
+			scrollLeft = x - ( viewWidth - w ) / 2;
+		}
+		else
+		{
+			vv = res ? 0 : v;
+			rv = res ? v : 0;
+			if ( v != 4 )
+			{
+				// make sure the left edge is in view
+				if ( vv == 3 || x < scrollLeft || ( rv != 3 && x > scrollLeft && w >= viewWidth ) )
+					scrollLeft = x;
+			}
+			if ( v != 3 )
+			{
+				// make sure the right edge is in view
+				x += w;
+				if ( vv == 4 || ( x > scrollLeft + viewWidth && ( rv == 4 || w < viewWidth ) ) )
+					scrollLeft = x - viewWidth;
+			}
+		}
+	}
+
+	// apply the new scroll position if changed
+	if ( vert && scrollTop != oldScrollTop )
+	{
+		if ( framedoc )
+		{
+			framedoc.body.scrollTop = scrollTop;
+			frameview.scrollTop = scrollTop;
+		}
+		else
+			frame.scrollTop = scrollTop;
+	}
+	if ( horiz && scrollLeft != oldScrollLeft )
+	{
+		if ( framedoc )
+		{
+			framedoc.body.scrollLeft = scrollLeft;
+			frameview.scrollLeft = scrollLeft;
+		}
+		else
+			frame.scrollLeft = scrollLeft;
+	}
+}
+
+// returns an object with x and y values
+// if viewPort is set, returns the top/left position relative to viewport
+// otherwise the top/left position is relative to the whole document
+function getpos( obj )
+{
+	var x, y;
+
+	x = y = 0;
+	if ( obj && obj.offsetParent )
+	{
+		// clientTop/clientLeft = the border thickness
+		x = obj.offsetLeft + obj.clientLeft;
+		y = obj.offsetTop + obj.clientTop;
+		while ( obj = obj.offsetParent )
+		{
+			x += obj.offsetLeft + obj.clientLeft;
+			y += obj.offsetTop + obj.clientTop;
+		}
+	}
+
+	return { x:x, y:y };
+}
+
+/*
+	setpos()
+
+	sets the element position.  recommended with style position = 'absolute'
+	this can be used in two ways:
+		( obj, x, y ) = set top/left coordinates directly
+		( obj, x, y, refobj, rel, [inv], [pad], [parent] ) = set position relative to other object
+
+	by including refobj, the position will be relative to the given object
+	this causes x and y to be used as literal offsets from the calculated position
+	if parent is provided, the final position will be relative to it instead of the whole window (ie- offsetParent)
+	if parent === true, then only relative offset positions will be used (use this when both objects have same offsetParent)
+
+	rel is a literal that indicates how to align the subwindow to the other object
+	it can be one of the 16 compass points, 'C' to center, or the corresponding numbers 0 to 16
+	this chart shows how each aligns:
+
+	  NW(5)  | NNW(9)  | N(1) | NNE(13) |  NE(7)			1. N	5. NW	 9. NNW		13. NNE
+	---------+---------+------+---------+---------			2. S	6. SW	10. SSW		14. SSE
+	 WNW(11) |                          | ENE(15)			3. W	7. NE	11. WNW		15. ENE
+	---------+    +----------------+    +---------			4. E	8. SE	12. WSW		16. ESE
+	   W(3)  |    |      C(0)      |    |   E(4)
+	---------+    +----------------+    +---------
+	 WSW(12) |                          | ESE(16)
+	---------+---------+------+---------+---------
+	  SW(6)  | SSW(10) | S(2) | SSE(14) |  SE(8)
+
+	inv is an optional boolean param.  if set, the relative alignment will be inverted
+	so that the object is INSIDE refobj.  this only applies to the main 8 compass points:
+
+	+-------+------+-------+
+	| NW(5) | N(1) | NE(7) |
+	+-------+------+-------+
+	|  W(3) |      |  E(4) |
+	+-------+------+-------+
+	| SW(6) | S(2) | SE(8) |
+	+-------+------+-------+
+
+	pad is an optional integer param.  if non-zero, will add offset from refobj.
+	this is done on both axis, separate from the x and y offsets.
+	if invered, the padding will also be inverted and offset towards the center.
+	if centering, neither inv or pad will have any effect.
+*/
+function setpos( obj, x, y, refobj, rel, inv, pad, parent )
+{
+	// position the object
+	if ( ! refobj )
+	{
+		// use exact coordinates
+		obj.style.top = y + 'px';
+		obj.style.left = x + 'px';
+		return;
+	}
+
+	var refpos = ( parent === true )
+		? { x: refobj.offsetLeft, y: refobj.offsetTop }
+		: getpos( refobj );
+	var x1,x2,y1,y2;
+
+	// init reference values
+	refpos.x2 = refpos.x + refobj.offsetWidth;
+	refpos.y2 = refpos.y + refobj.offsetHeight;
+	x = Number( x ); y = Number( y );
+	pad = ( pad ) ? Number( pad ) : 0;
+	if ( parent != null && typeof parent == 'object' )
+	{
+		// adjust offset to make relative to parent
+		var parpos = getpos( parent );
+		x -= parpos.x;
+		y -= parpos.y;
+	}
+
+	// calculate the relative position
+	switch ( rel )
+	{
+	case 'NW': case 'NNW': case 'N': case 'NNE': case 'NE':
+	case 5: case 9: case 1: case 13: case 7:
+		if ( inv ) y1 = refpos.y + pad; else y2 = refpos.y - pad;
+		break;
+	case 'SW': case 'SSW': case 'S': case 'SSE': case 'SE':
+	case 6: case 10: case 2: case 14: case 8:
+		if ( inv ) y2 = refpos.y2 - pad; else y1 = refpos.y2 + pad;
+		break;
+	case 'C': case 'W': case 'E': case 0: case 3: case 4:
+		y1 = refpos.y + ( refobj.offsetHeight - obj.offsetHeight ) / 2;
+		break;
+	case 'WNW': case 'ENE': case 11: case 15:
+		y1 = refpos.y;
+		break;
+	case 'WSW': case 'ESE': case 12: case 16:
+		y2 = refpos.y2;
+		break;
+	default:
+		// default to "same top left" (inv + NW)
+		y1 = refpos.y + pad;
+	}
+	switch ( rel )
+	{
+	case 'NW': case 'WNW': case 'W': case 'WSW': case 'SW':
+	case 5: case 11: case 3: case 12: case 6:
+		if ( inv ) x1 = refpos.x + pad; else x2 = refpos.x - pad;
+		break;
+	case 'NE': case 'ENE': case 'E': case 'ESE': case 'SE':
+	case 7: case 15: case 4: case 16: case 8:
+		if ( inv ) x2 = refpos.x2 - pad; else x1 = refpos.x2 + pad;
+		break;
+	case 'C': case 'N': case 'S': case 0: case 1: case 2:
+		x1 = refpos.x + ( refobj.offsetWidth - obj.offsetWidth ) / 2;
+		break;
+	case 'NNW': case 'SSW': case 9: case 10:
+		x1 = refpos.x;
+		break;
+	case 'NNE': case 'SSE': case 13: case 14:
+		x2 = refpos.x2;
+		break;
+	default:
+		// default to "same top left" (inv + NW)
+		x1 = refpos.x + pad;
+	}
+	if ( x1 ) obj.style.left = ( x + x1 ) + 'px';
+	if ( x2 ) obj.style.left = ( x + x2 - obj.offsetWidth ) + 'px';
+	if ( y1 ) obj.style.top = ( y + y1 ) + 'px';
+	if ( y2 ) obj.style.top = ( y + y2 - obj.offsetHeight ) + 'px';
+}
+
+// if win is empty, then the current window is used
+function getWindowScrollPos( win )
+{
+	if ( ! win ) win = window;
+	var pos = {
+		x : win.scrollX,
+		y : win.scrollY,
+	};
+	// the scroll position uses alternate names in some browsers, such as MSIE
+	if ( pos.x == null ) pos.x = win.pageXOffset;
+	if ( pos.y == null ) pos.y = win.pageYOffset;
+	return pos;
+}
+
+// gets the actual viewport size, EXCLUDING any scroll bars on the window
+function getWindowClientSize( win )
+{
+	if ( ! win ) win = window;
+	var db = win.document;
+	if ( db.clientHeight == null )
+	{
+		db = db.documentElement || db.body.parentNode;
+		if ( ! db || db.clientHeight == null ) db = win.document.body;
+	}
+	return { height: db.clientHeight, width: db.clientWidth };
+}
+
+// similar to elem.getBoundingClientRect() except coords are relative to document instead of the screen
+// if elem is empty, then the bounding rect of the whole document will be returned
+// if win is empty, then the current window is used
+function getBoundingDocumentRect( elem, win )
+{
+	if ( ! win ) win = window;
+	if ( ! elem )
+	{
+		// just get the size of the whole document
+		var body = win.document.body;
+		elem = win.document.documentElement;
+		var h = Math.max( body.scrollHeight, body.offsetHeight, elem.scrollHeight, elem.offsetHeight, elem.clientHeight );
+		var w = Math.max( body.scrollWidth, body.offsetWidth, elem.scrollWidth, elem.offsetWidth, elem.clientWidth );
+		return {
+			top: 0, left: 0,
+			bottom: h, right: w,
+			height: h, width: w
+		};
+	}
+
+	var bb = elem.getBoundingClientRect();
+	if ( ! bb ) return null;
+
+	// make a copy since the DOMRect object is read-only
+	var rect = {
+		top: bb.top,		left: bb.left,
+		bottom: bb.bottom,	right: bb.right,
+		height: bb.height,	width: bb.width
+	};
+
+	// account for the window scroll position
+	var pos = getWindowScrollPos( win );
+
+	// apply the offset to the bounds
+	rect.left += pos.x; rect.right += pos.x;
+	rect.top += pos.y; rect.bottom += pos.y;
+
+	return rect;
+}
+
+// similar to elem.getBoundingClientRect() except for the window itself
+// if win is empty, the current window will be used
+function getBoundingWindowRect( win )
+{
+	if ( ! win ) win = window;
+	var wbb = getWindowClientSize( win );
+	wbb.top = 0; wbb.left = 0;
+	wbb.bottom = wbb.top + wbb.height;
+	wbb.right = wbb.left + wbb.width;
+	return wbb;
+}
+
+// returns an object with the currently visible client region of an element
+// this only accounts for scrolling of parent elements with overflow and the window itself
+// it does not account for other elements with overlapping positions
+// returns false if the element is not visible at all
+function getVisibleClientRect( elem )
+{
+	// get the client rect of the element itself
+	var win = get_parent_window( elem );
+	var r = elem.getBoundingClientRect();
+	if ( ! r.height || ! r.width ) return false;
+	var box = {
+		top: r.top, left: r.left,
+		bottom: r.bottom, right: r.right,
+	};
+	// check for any overflow scrolling parents
+	var x, y;
+	var node = getnode( elem, -1 );
+	var body = win.document.body;
+	while ( node && node !== body )
+	{
+		if ( node.offsetHeight > 0 && node.offsetWidth > 0
+			&& ( node.offsetHeight < node.scrollHeight || node.offsetWidth < node.scrollWidth ) )
+		{
+			// clip any area outside the parent element
+			r = node.getBoundingClientRect();
+			y = r.top + node.clientTop; x = r.left + node.clientLeft;
+			if ( box.top < y ) box.top = y;
+			if ( box.left < x ) box.left = x;
+			y += node.clientHeight; x += node.clientWidth;
+			if ( box.bottom > y ) box.bottom = y;
+			if ( box.right > x ) box.right = x;
+			// check if the box is completely clipped
+			if ( box.top >= box.bottom || box.left >= box.right ) return false;
+		}
+		node = getnode( node, -1 );
+	}
+	// clip the area outside the visible client region
+	if ( box.top < 0 ) box.top = 0;
+	if ( box.left < 0 ) box.left = 0;
+	if ( node === body )
+	{
+		// use the document client area
+		r = getWindowClientSize( win );
+		y = r.height; x = r.width;
+	}
+	else
+	{
+		// use the inside of the window
+		y = win.innerHeight; x = win.innerWidth;
+	}
+	if ( box.bottom > y ) box.bottom = y;
+	if ( box.right > x ) box.right = x;
+
+	// check if the box is completely clipped
+	if ( box.top >= box.bottom || box.left >= box.right ) return false;
+
+	// finally set the height and width based on the visible area
+	box.height = box.bottom - box.top;
+	box.width = box.right - box.left;
+	return box;
+}
+
+// returns point object { x:#, y:# } with equivalent point based on whole computer screen
+// given the coordinates relative to the contents of the window
+// optionally x can be an input point object and y will be ignored
+// if win is empty, the current window will be used
+function screen_point( x, y, win )
+{
+	if ( x == null ) return;
+	if ( typeof x == 'object' )
+	{
+		y = x.y;
+		x = x.x;
+	}
+	if ( ! win ) win = window;
+
+	// calculate the thickness of the window border, based on width to avoid toolbars etc
+	// this is also the thickness of the bottom border in most cases
+	var b = ( win.outerWidth - win.innerWidth ) / 2;
+
+	// add the thickness of the top and left borders of the browser window
+	x += b;
+	y += ( win.outerHeight - win.innerHeight ) - b;
+
+	// add the screen position of the window itself
+	x += win.screenX;
+	y += win.screenY;
+
+	return { x: x, y: y };
+}
+
+function select_text( node, start_pos, end_pos )
+{
+	var r;
+
+	if ( document.selection )
+	{
+		// Microsoft IE
+		r = document.body.createTextRange();
+		r.moveToElementText( node );
+		if ( end_pos != null )
+		{
+			r.move( 'character', start_pos );
+			r.moveEnd( 'character', end_pos-start_pos+1 );
+		}
+		else if ( start_pos != null )
+			r.moveStart( 'character', start_pos );
+
+		// select the text
+		r.select();
+	}
+	else
+	{
+		// FireFox
+		// note: strictly parses only the text in the specific text node
+		// example: "<span>1234<b>asdf</b>5678</span>"  will only parse "1234" from the <span>
+		r = document.createRange();
+		r.selectNodeContents( node );
+		var child = node.firstChild;
+		if ( start_pos != null ) r.setStart( child, start_pos );
+		if ( end_pos != null ) r.setEnd( child, end_pos+1 );
+
+		// select the text
+		var s = window.getSelection();
+		s.removeAllRanges();
+		s.addRange( r );
+	}
+}
+
+// selects text inside a <input type=text>
+function textbox_select( textbox, start_pos, end_pos )
+{
+	// select all by default
+	if ( start_pos == null ) start_pos = 0;
+	if ( end_pos == null ) end_pos = textbox.value.length;
+
+	// select the text in the text box
+	if ( textbox.createTextRange )
+	{
+		// Microsoft IE
+		var r = textbox.createTextRange();
+		r.moveStart( 'character', start_pos );
+		r.moveEnd( 'character', end_pos );
+		r.select();
+	}
+	else
+	{
+		textbox.selectionStart = start_pos;
+		textbox.selectionEnd = end_pos;
+	}
+}
+
+// gets the computed style of an element
+function get_style( thenode, thestyle )
+{
+	if ( thenode == null )
+		return null;
+
+	var css = null;
+
+	// get the computed styles object
+	if ( window.getComputedStyle != null )
+		css = getComputedStyle( thenode, '' );
+	else if ( thenode.currentStyle != null )
+		css = thenode.currentStyle;
+
+	// return the requested style
+	if ( css != null && thestyle != null )
+		return css[thestyle];
+
+	return css;
+}
+
+// gets the actual size of an element, without padding, border, or margin
+// optional thedim indicates which size to return, x or y
+function get_size( obj, thedim )
+{
+	var sz = { x:0, y:0 };
+
+	if ( obj )
+	{
+		// client width includes the padding, but not margin or border
+		sz.x = obj.clientWidth;
+		sz.y = obj.clientHeight;
+
+		var px, py, css;
+		css = get_style( obj );
+		if ( css )
+		{
+			// subtract the padding if possible
+			var p;
+			p = parseFloat( css.paddingLeft ) + parseFloat( css.paddingRight );
+			if ( p != NaN ) sz.x -= p;
+			p = parseFloat( css.paddingTop ) + parseFloat( css.paddingBottom );
+			if ( p != NaN ) sz.y -= p;
+		}
+	}
+
+	if ( thedim != null ) return sz[thedim];
+	return sz;
+}
+
+// returns an object with .height and .width for the natural size of the image in an <img> tag
+function get_img_size( img )
+{
+	if ( img == null ) return null;
+
+	// determine the natural dimensions of the image
+	var s = { width : img.naturalWidth, height : img.naturalHeight };
+	if ( s.width == null || s.height == null )
+	{
+		var ximg = new Image();
+		ximg.src = img.src;
+		s.width = ximg.width;
+		s.height = ximg.height;
+	}
+	return s;
+}
+
+// generic cross-browser wrapper for setting an event handler
+// make sure theEvent is the pure event name (ie- 'mouseover' instead of 'onmouseover')
+// doCapture tells addEventListener to call the callback in the capturing phase instead of the bubbling phase
+function SetEventHandler( obj, theEvent, theCallback, doCapture )
+{
+	var onEvent = 'on' + theEvent;
+	if ( obj.tagName == null || obj.tagName.toLowerCase() != 'object' )
+	{
+		if ( obj.attachEvent )
+			obj.attachEvent( onEvent, theCallback );
+		else if ( obj.addEventListener )
+			obj.addEventListener( theEvent, theCallback, doCapture );
+		else
+			obj[ onEvent ] = theCallback;
+	}
+	else
+	{
+		// <obejct> tag (with a tagName) is special case for MSIE 11
+		// Chrome and Firefox do not hit this case and work using regular method
+		// But in MSIE 11 .addEventListener() does not seem to work with <object> tags
+		// MSIE 9 and 10 also hit this case and also work with the special method
+		obj[ onEvent ] = theCallback;
+	}
+}
+
+// generic cross-browser wrapper for removing an event handler
+function RemoveEventHandler( obj, theEvent, theCallback )
+{
+	var onEvent = 'on' + theEvent;
+	if ( obj.tagName == null || obj.tagName.toLowerCase() != 'object' )
+	{
+		if ( obj.detachEvent )
+			obj.detachEvent( onEvent, theCallback );
+		else if ( obj.removeEventListener )
+			obj.removeEventListener( theEvent, theCallback );
+		else if ( obj[ onEvent ] === theCallback )
+			obj[ onEvent ] = null;
+	}
+	else
+	{
+		// <obejct> tag (with a tagName) is special case for MSIE 11
+		if ( obj[ onEvent ] === theCallback )
+			obj[ onEvent ] = null;
+	}
+}
+
+/*
+	MakeCallback()
+
+	returns a closure that calls the given method as from the object
+	method should be the actual function, not just the function name
+	any arguments from the caller will be passed through to the method
+
+	if non-null, delay will wrap the callback in setTimeout()
+	note that this prevents the callback return value from being returned
+*/
+function MakeCallback( obj, method, delay )
+{
+	if ( method == null || typeof method != 'function' )
+	{
+		return function() {};
+	}
+	if ( delay == null || isNaN( delay ) )
+	{
+		return function() {
+			return method.apply( obj, arguments );
+		};
+	}
+	else
+	{
+		return function() { setTimeout( function() {
+			method.apply( obj, arguments );
+		}, delay ); };
+	}
+}
+
+/*
+	ErrorCheck()
+
+	checks AJAX reply data for fields indicating an error condition that
+	would normally prevent pages from being displayed and handles them accordingly
+	returns true if an error condition was detected, else false
+
+	Error = error message from PHP, alerts the error message
+	Redirect = immediately redirects to the new URL
+	Code = an HTTP response code such as 404, alerts the code and optionally data.Message
+	AlertMsg = show an alert box to the user with data.AlertMsg, optionally prefixed by data.AlertTitle
+
+	the optional onrror param can be set to a callback func to handle an error
+	if set to false, then no action will be taken
+	otherwise, the error message will be displayed with alert()
+*/
+function ErrorCheck( thedata, onerror )
+{
+	if ( thedata == null || typeof thedata != 'object' ) return false;
+	if ( thedata.Redirect )
+	{
+		// redirect to the URL
+		window.location = thedata.Redirect;
+		return true;
+	}
+	if ( thedata.Error || thedata.Code != null )
+	{
+		if ( onerror !== false )
+		{
+			// determine the correct error message
+			var msg;
+			if ( thedata.Code != null )
+				msg = 'HTTP ' + thedata.Code + ': ' + thedata.Message;
+			else
+				msg = thedata.Error;
+			if ( msg == null || msg == '' )
+				msg = 'An error has occurred.';
+
+			// display the error message
+			if ( window.console ) window.console.error( msg );
+			if ( typeof onerror == 'function' )
+				onerror( msg );
+			else
+				alert_deferred( msg );
+		}
+		return true;
+	}
+	if ( thedata.AlertMsg != null )
+	{
+		// just show an alert message
+		var msg = thedata.AlertMsg;
+		if ( thedata.AlertTitle ) msg = thedata.AlertTitle + "\n\n" + msg;
+		if ( typeof onerror == 'function' )
+			onerror( msg );
+		else
+			alert_deferred( msg );
+		return true;
+	}
+	// the data does not indicate any errors and can be processed by the application
+	return false;
+}
+
+/*
+	CreateElement()
+
+	creates a new HTML tag and returns the DOM object
+	optionally sets the properties and attributes, and inserts into parent element
+	props and attrs should be an object mapping name => value for each entry
+	if parent is Boolean(true), the document body is used
+	the parent may also be the id of the parent tag instead of the element itself
+*/
+function CreateElement( tagName, props, attrs, parent )
+{
+	if ( tagName == null ) return null;
+	var elem = document.createElement( tagName );
+	if ( props != null )
+	{
+		for ( var i in props )
+		{
+			elem[i] = props[i];
+		}
+	}
+	if ( attrs != null )
+	{
+		for ( var i in attrs )
+		{
+			elem.setAttribute( i, attrs[i] );
+		}
+	}
+	if ( parent != null )
+	{
+		if ( parent === true )
+			parent = document.body;
+		else if ( typeof parent == 'string' )
+			parent = get_element( parent );
+		if ( parent != null )
+			parent.appendChild( elem );
+	}
+
+	return elem;
+}
+
+// ********************************************************************************
+// class SubWindow
+// ********************************************************************************
+
+SubWindow.prototype.hide = function SubWindow_hide()
+{
+	// make it invisible
+	if ( this.frame )
+	{
+		this.visible = false;
+		this.frame.style.display = 'none';
+	}
+}
+
+SubWindow.prototype.show = function SubWindow_show()
+{
+	// make it visible
+	if ( this.frame )
+	{
+		this.visible = true;
+		if ( this.display_style )
+		{
+			// use the provided style
+			this.frame.style.display = this.display_style;
+		}
+		else if ( _MSIE && _MSIE_version < 8 )
+		{
+			// always use 'block' for visible elements
+			this.frame.style.display = 'block';
+		}
+		else
+		{
+			// use special display styles for certain elements
+			var thetag = this.frame.tagName.toLowerCase();
+			var thestyle = 'block';
+			switch ( thetag )
+			{
+				case 'table': thestyle = 'table'; break;
+				case 'tbody': thestyle = 'table-row-group'; break;
+				case 'tr': thestyle = 'table-row'; break;
+				case 'td': thestyle = 'table-cell'; break;
+			}
+			this.frame.style.display = thestyle;
+		}
+	}
+}
+
+// call this from clienthook to load AJAX content
+// theflags = (optional) additional subwindow flags
+//		16 = loads the window but does not show it
+SubWindow.prototype.displaypage = function SubWindow_displaypage( thetext, theflags )
+{
+	if ( theflags == null ) theflags = 0;
+	theflags |= this.flags;
+	if ( thetext != null )
+	{
+		// display the frame content
+		if ( 0 != ( theflags & 1 ) )
+		{
+			this.data = thetext;
+			if ( this.debugdiv ) // copy text from 1st HTML comment into debug element
+				this.debugdiv.innerHTML = extract_string( thetext, '<!--', '-->' );
+		}
+		else
+			this.body.innerHTML = thetext;
+	}
+
+	var rc = true;
+	if ( this.onload && 0 == ( theflags & 2 ) ) rc = this.onload( this.owner );
+	if ( rc != false && 0 == ( theflags & 16 ) ) this.show();
+	if ( this.onload && 0 != ( theflags & 2 ) ) this.onload( this.owner );
+}
+
+/*
+	SubWindow()
+
+	inits a sub window object
+
+	theframe = the outermost frame object that will show/hide the sub window
+	thebody = the inner frame that will contain the dynamic content
+		(if starts with "*" then searches by tagname for a child node of the frame)
+	theflags = (optional) misc bit flags for this tab, for use by external code
+		flags used with built-in displaypage() func:
+			1 = loads data instead of content
+			2 = causes the onload event to occur AFTER the window is visible
+	theowner = (optional) owner object ref, for use by external code
+*/
+function SubWindow( theframe, thebody, theflags, theowner )
+{
+	// get the frame and body elements
+	this.frame = ( typeof theframe == 'string' ) ? $( theframe ) : theframe;
+	if ( thebody )
+	{
+		if ( typeof thebody == 'string' )
+		{
+			thebody = ( '*' == thebody.slice( 0, 1 ) )
+				? findchild( this.frame, thebody.slice( 1 ) ) : $( thebody );
+		}
+		this.body = thebody;
+	}
+	else
+		this.body = this.frame;
+
+	this.src = this.frame.getAttribute( 'src' );
+	this.flags = theflags;
+	this.data = null;
+	this.url = null;
+	this.visible = null;
+	this.onload = null;
+	this.debugdiv = null;		// must manually set the debug div
+	this.owner = theowner;
+}
+
+// wrapper for subwindow constructor
+function New_SubWindow( w, theflags, theowner )
+{
+	if ( w == null ) return null;
+	if ( typeof w == 'object' && w.tagName == null && w.frame )
+		return new SubWindow( w.frame, w.body, theflags, theowner );
+	else
+		return new SubWindow( w, null, theflags, theowner );
+}
+
+// ********************************************************************************
+// class Timer
+// ********************************************************************************
+
+// if start is true, timer is (re)started; else timer is stopped
+// if thetimeout is set, then it will be used instead of the default timeout
+// if therepeat is set, then it will be used instead of the default repeat
+Timer.prototype.reset = function Timer_reset( start, thetimeout, therepeat )
+{
+	// stop the current timer, if any
+	var func = this.repeat ? 'Interval' : 'Timeout';
+	if ( this.tid ) window['clear'+func]( this.tid );
+	if ( ! start )
+	{
+		this.tid = null;
+		return;
+	}
+
+	// start the timer with the given settings
+	if ( thetimeout == null ) thetimeout = this.timeout;
+	if ( therepeat == null ) therepeat = this.repeat;
+	if ( therepeat != this.repeat ) func = therepeat ? 'Interval' : 'Timeout';
+	this.tid = ( start && thetimeout >= 0 ) ? window['set'+func]( this.action, thetimeout ) : null;
+}
+
+// if repeat is set, then it will use an interval instead of a timer
+function Timer( thefunction, thetimeout, repeat )
+{
+	// members
+	this.timeout = thetimeout;			// number of millisecs
+	this.action = thefunction;			// function to call upon timeout
+	this.tid = null;					// timeout id returned by the system
+	this.repeat = repeat;
+
+	// methods
+//	this.reset = Timer_reset;			// starts or stops the timer
+}
+
+
+/**
+ * Copied from jQuery source and modified to remove jQuery dependency
+ */
+function addClass( elem, value ) {
+    var classes, cur, clazz, j, finalValue,
+        proceed = typeof value === "string" && value && elem,
+        rnotwhite = (/\S+/g), rclass = /[\t\r\n\f]/g;
+
+    if ( proceed ) {
+        // The disjunction here is for better compressibility (see removeClass)
+        classes = ( value || "" ).match( rnotwhite ) || [];
+
+        cur = elem.nodeType === 1 && ( elem.className ?
+            ( " " + elem.className + " " ).replace( rclass, " " ) :
+            " "
+        );
+
+        if ( cur ) {
+            j = 0;
+            while ( (clazz = classes[j++]) ) {
+                if ( cur.indexOf( " " + clazz + " " ) < 0 ) {
+                    cur += clazz + " ";
+                }
+            }
+
+            // only assign if different to avoid unneeded rendering.
+            finalValue = String.prototype.trim ? cur.trim() : cur;
+            if ( elem.className !== finalValue ) {
+                elem.className = finalValue;
+            }
+        }
+    }
+}
+
+
+/**
+ * Copied from jQuery source and modified to remove jQuery dependency
+ */
+function removeClass( elem, value ) {
+    var classes, cur, clazz, j, finalValue,
+        proceed = arguments.length === 0 || typeof value === "string" && value && elem,
+        rnotwhite = (/\S+/g), rclass = /[\t\r\n\f]/g;
+
+    if ( proceed ) {
+        classes = ( value || "" ).match( rnotwhite ) || [];
+
+        // This expression is here for better compressibility (see addClass)
+        cur = elem.nodeType === 1 && ( elem.className ?
+            ( " " + elem.className + " " ).replace( rclass, " " ) :
+            ""
+        );
+
+        if ( cur ) {
+            j = 0;
+            while ( (clazz = classes[j++]) ) {
+                // Remove *all* instances
+                while ( cur.indexOf( " " + clazz + " " ) >= 0 ) {
+                    cur = cur.replace( " " + clazz + " ", " " );
+                }
+            }
+
+            // only assign if different to avoid unneeded rendering.
+            finalValue = ( value && String.prototype.trim ) ? cur.trim() : '';
+            if ( elem.className !== finalValue ) {
+                elem.className = finalValue;
+            }
+        }
+    }
+
+    return this;
+}
+
+
+/**
+ * Copied from jQuery source and modified to remove jQuery dependency
+ */
+function toggleClass( elem, value, stateVal ) {
+    var type = typeof value;
+
+    if ( typeof stateVal === "boolean" && type === "string" ) {
+        return stateVal ? addClass( elem, value ) : removeClass( elem, value );
+    }
+
+    if ( hasClass( elem, value ) ) {
+        return removeClass( elem, value );
+    }
+    return addClass( elem, value );
+}
+
+
+/**
+ * Copied from jQuery source and modified to remove jQuery dependency
+ */
+function hasClass( elem, clazz ) {
+    if ( !elem ) {
+        return false;
+    }
+
+    var className = " " + clazz + " ", rclass = /[\t\r\n\f]/g;
+    if ( elem.nodeType === 1 && (" " + elem.className + " ").replace(rclass, " ").indexOf( className ) >= 0 ) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+	classNames()
+
+	builds a normalized space-delimited list of class names from various kinds of input values
+
+	if an input contains a string or number, it will be added as a class name
+	if an input contains an object, the name of each member with a true-ish value will be added as a class name
+	if an input contains an array, each element will be processed as an input
+	if an input contains a function, it will be executed and the return value processed as an input
+
+	any input class name containing spaces will be split into separate class names
+	any class name that is added multiple times will only keep the final occurrence
+*/
+function classNames() {
+	var cn = ''
+	var classes = classNamesList( arguments );
+	for ( var c in classes )
+	{
+		// only include class names that are enabled
+		if ( classes[c] ) cn += ' ' + c;
+	}
+	return cn.substr( 1 );
+}
+function classNamesList( list, classes ) {
+	if ( ! classes ) classes = new Object();
+	for ( var i in list )
+	{
+		if ( list[i] ) classNamesItem( list[i], classes );
+	}
+	return classes;
+}
+function classNamesItem( item, classes ) {
+	if ( ! item ) return;
+	switch ( typeof item )
+	{
+		case 'string':
+			// trim any leading or trailing whitespace
+			item = item.trim();
+			if ( ! item ) break;
+			// split strings with spaces into multiple class names
+			var list = item.split( /\s+/ );
+			for ( var j in list ) {
+				j = list[j];
+				if ( j ) classes[j] = true;
+			}
+			break;
+
+		// numeric items are always added to the class list
+		case 'number':
+			classes[ item ] = true;
+			break;
+
+		case 'object':
+			if ( Array.isArray( item ) )
+			{
+				// process an array as a separate list of items
+				classNamesList( item, classes );
+			}
+			else
+			{
+				// object member keys are added as class names if their value is true-ish
+				for ( var k in item ) {
+					if ( ! item.hasOwnProperty( k ) ) continue;
+					var klass = k.trim();
+					if ( ! klass ) continue;
+					// split member key with spaces into multiple class names
+					var c = Boolean( item[k] );
+					var list = klass.split( /\s+/ );
+					for ( var j in list ) {
+						j = list[j];
+						if ( j ) classes[j] = c;
+					}
+				}
+			}
+			break;
+
+		// process the function return value as a class item
+		case 'function':
+			item = item();
+			if ( item ) classNamesItem( item, classes );
+			break;
+	}
+}
+
+function utf8_encode( str ) {
+    return unescape( encodeURIComponent( str ) );
+}
+
+
+function utf8_decode( str ) {
+    return decodeURIComponent( escape( str ) );
+}
+
+// converts an object into a URL encoded request string
+// sub-objects will have indexed param names
+function makeRequestData( data, prefix )
+{
+	var out = '';
+	if ( data && typeof data == 'object' ) {
+		if ( ! prefix ) prefix = '';
+		for ( var i in data ) {
+			var curr = data[i];
+			if ( curr == null ) continue;
+			var fld = ( prefix === '' ) ? i : prefix+'['+i+']';
+			if ( out.length > 0 ) out += '&';
+			if ( typeof curr == 'object' ) {
+				// recursively expand sub-objects
+				out += makeRequestData( curr, fld );
+				continue;
+			} else if ( typeof curr == 'boolean' ) {
+				out += fld+'='+( curr && 1 || 0 )
+			} else {
+				// URL encode the value
+				out += fld+'='+encodeURIComponent(curr);
+			}
+		}
+	}
+	return out;
+}
+
+
+/**
+ * Defers a function until the call stack has cleared. If arguments are passed to defer(),
+ * they will be forwarded to func, as will the current this object.
+ *
+ * Inspired largely by the underscorejs code base.
+ *
+ * @param  {Number} wait    (optional) delay before running func
+ * @param  {function} func  function to run
+ */
+function defer( wait, func ) {
+	var delay = 0;
+	var f = func;
+	var argc = 1;
+	if ( typeof wait === 'number' ) {
+		argc = 2;
+		delay = wait;
+	} else {
+		f = wait;
+	}
+	var self = this;
+	var args = Array.prototype.slice.call( arguments, argc );
+	setTimeout( function () {
+		f.apply( self, args );
+	}, delay );
+}
+
+/**
+ * Creates a function that postpones its execution until after wait ms have
+ * passed since the last time it was called.
+ */
+function debounce(wait, func) {
+    wait = wait || 0;
+    func = func || function () {};
+    var id;
+
+    return function () {
+        var context = this;
+        var args = arguments;
+        if (id) clearTimeout(id);
+        id = setTimeout(function () {
+            func.apply(context, args);
+        }, wait);
+    };
+};
+
+/**
+ * Creates a function that can only be executed one time.
+ * Subsequent calls return the original return value of the function.
+ *
+ * Borrowed from underscore.js source code
+ */
+function once(func) {
+    var ran = false, memo;
+    return function () {
+        if (!ran) {
+            ran = true;
+            memo = func.apply(this, arguments);
+            func = null;
+        }
+        return memo;
+    };
+}
+
+
+/**
+ * Creates a memoized version of a function. The first call to the memoized
+ * function will run the inner function and store the result. Subsequent calls
+ * will return the result immediately without running the inner function again.
+ *
+ * Borrowed from the underscoreJS source code -- see http://underscorejs.org/docs/underscore.html.
+ *
+ * @param  func    inner function
+ * @param  hasher  optional. Function to compute the cache key based on the arguments 
+ *                 provided to the inner function. If not provided, the first argument
+ *                 is used as the cache key
+ */
+function memoize(func, hasher) {
+    var memoizer = function (key) {
+        var cache = memoizer.cache;
+        var address = '' + (hasher ? hasher.apply(this, arguments) : key);
+        if (!cache.hasOwnProperty(address)) cache[address] = func.apply(this, arguments);
+        return cache[address];
+    };
+    memoizer.cache = {};
+    return memoizer;
+};
+
+/**
+ * Gets a query parameter with the given string. If the parameter is not defined
+ * in the query string, returns null.
+ */
+function getQueryParam(param) {
+    var match = RegExp('[?&]' + param + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+/**
+ * Turns a date into a string using an Oracle date format.
+ */
+var formatDateOracle = (function () {
+
+	/**
+	 * Returns a string representation of number with a leading zero
+	 * added if number < 10.
+	 */
+	function addLeadingZero(number) {
+	    return ('0' + number).slice(-2);
+	}
+
+	var symbols = {
+
+		// Year
+		YYYY: function (date) { return date.getFullYear(); },
+		YY: function (date) {
+			var years = date.getFullYear();
+			return years - (Math.floor(years / 100) * 100);
+		},
+
+		// Month
+		MON: function (date) { return date_field.month_abbr[date.getMonth()].toUpperCase(); },
+		mon: function (date) { return date_field.month_abbr[date.getMonth()].toLowerCase(); },
+		Mon: function (date) { return date_field.month_abbr[date.getMonth()]; },
+		MONTH: function (date) { return date_field.month_names[date.getMonth()].toUpperCase(); },
+		month: function (date) { return date_field.month_names[date.getMonth()].toLowerCase(); },
+		Month: function (date) { return date_field.month_names[date.getMonth()]; },
+		MM: function (date) { return addLeadingZero(date.getMonth() + 1); },
+
+		// Day
+		DAY: function (date) { return date_field.day_names[date.getDay()].toUpperCase(); },
+		Day: function (date) { return date_field.day_names[date.getDay()]; },
+		day: function (date) { return date_field.day_names[date.getDay()].toLowerCase(); },
+		DY: function (date) { return date_field.day_abbr[date.getDay()].toUpperCase(); },
+		Dy: function (date) { return date_field.day_abbr[date.getDay()]; },
+		dy: function (date) { return date_field.day_abbr[date.getDay()].toLowerCase(); },
+		DD: function (date) { return addLeadingZero(date.getDate()); },
+
+		// Hour
+		HH: function (date) { return addLeadingZero((date.getHours() % 12) || 12); },
+		HH24: function (date) { return addLeadingZero(date.getHours()); },
+
+		// Minute
+		MI: function (date) { return addLeadingZero(date.getMinutes()); },
+
+		// Second
+		SS: function (date) { return addLeadingZero(date.getSeconds()); },
+
+		// Meridian
+		AM: function (date) { return date.getHours() >= 12 ? 'PM' : 'AM'; },
+		am: function (date) { return date.getHours() >= 12 ? 'pm' : 'am'; },
+		'A.M.': function (date) { return date.getHours() >= 12 ? 'P.M.' : 'A.M.'; },
+		'a.m.': function (date) { return date.getHours() >= 12 ? 'p.m.' : 'a.m.'; }
+
+	};
+
+	// Add equivalents for symbols that return the same result
+	symbols.yyyy = symbols.YYYY;
+	symbols.RRRR = symbols.YYYY;
+	symbols.rrrr = symbols.RRRR;
+	symbols.yy = symbols.YY;
+	symbols.RR = symbols.YY;
+	symbols.rr = symbols.RR;
+	symbols.mm = symbols.MM;
+	symbols.dd = symbols.DD;
+	symbols.HH12 = symbols.HH;
+	symbols.hh = symbols.HH;
+	symbols.hh12 = symbols.HH;
+	symbols.hh24 = symbols.HH24;
+	symbols.mi = symbols.MI;
+	symbols.ss = symbols.SS;
+	symbols.PM = symbols.AM;
+	symbols.pm = symbols.am;
+	symbols['P.M.'] = symbols['A.M.'];
+	symbols['p.m.'] = symbols['a.m.'];
+
+
+	// Sort symbols keys so that the longest are first in the list. That way,
+	// the replace operation searches for complete matches on the longest items first.
+	// Also sort lowercase before uppercase. If uppercase is sorted before lowercase,
+	// then formatDateOracle(new Date(), 'Day') will produce 'Thursday'. Later, 'day' will
+	// be matched in the string and produce 'Thursthursday'.
+	var keys = [];
+	for (var key in symbols) {
+		if (symbols.hasOwnProperty(key)) {
+			keys.push(key);
+		}
+	}
+	keys.sort(function (a, b) {
+		if (a.length === b.length) {
+			var alower = a.toLowerCase();
+			var blower = b.toLowerCase();
+			if (alower === blower) {
+				// Sort the lowercase item first
+				return alower === a ? -1 : 1;
+			}
+		}
+		return b.length - a.length;
+	});
+
+
+	// This function performs the actual formatting operation. This could be improved
+	// to make one pass through the format string instead of a pass for each symbol.
+	// However, this improvement is not trivial.
+	var fn = function (date, format) {
+		if (date == null) return null;
+		var result = format.slice(0);  // copy format string
+		for (var i = 0; i < keys.length; ++i) {
+			var key = keys[i];
+			result = result.replace(key, symbols[key](date));
+		}
+		return result;
+	};
+
+
+	// Return a memoized copy of the above function to save the expensive
+	// calculation on a second call.
+	return memoize(fn, function hasher(date, format) {
+		if (date == null) return null;
+
+		// Make sure we are given a date
+		if (Object.prototype.toString.call(date) !== '[object Date]' || isNaN(date.valueOf())) {
+			throw new TypeError('Must pass a valid date object');
+		}
+
+		// Generate a cache key for the memoize() function since the first
+		// parameter alone cannot be the cache key
+		return format + date.getTime();
+	});
+
+})();

@@ -1,0 +1,1594 @@
+/*
+	client.js
+
+	defines wrapper functions for the XMLHttpRequest object to perform asynchronous background http requests
+
+	---------	----	-------------------------------------------------------
+	4/20/2006	kwb		created
+
+	6/8/2006	kwb		added class FormFields, improved xmlconvert()
+
+	6/30/2006	kwb		handled bad input in xmlparse()
+
+	7/3/2006	kwb		normalized all node names in xmlconvert() to lower case
+
+	7/14/2006	kwb		1. added flags member to FormFields() object
+						2. changed defualt behavior of FormFields_request() to use the field name instead of element id'
+						3. added support for passing an array into FormFields() instead of an xml object
+
+	9/27/2006	kwb		1. added FormFields_write()
+						2. made FormFields_load() recursive, to allow sub arrays in the field map
+
+	10/12/2006	kwb		added make_request()
+
+	10/20/2006	kwb		added support for name attribute in xmlconvert(), to be used in place of the tag name as the array index
+
+	10/30/2006	kwb		added FormFields_read() and FormFields_diff()
+
+	11/9/2006	kwb		added path argument to FormFields_diff() to allow the diff_hook to know the context
+
+	1/17/2007	kwb		added support for control arrays in FormFields (prefix element name with *)
+
+	3/2/2007	kwb		added support for "tables" in FormFields (prefix element name with @ and define columns)
+
+	4/25/2007	kwb		added check for bad input data in FormFields_write()
+
+	9-Oct-2007		kwb		added miscobj param to AJAX function to provide external object ref in clienthook
+
+	8-Nov-2007		kwb		converted FormFields class to a true object model using prototypes
+
+	11-Nov-2008		kwb		1. improved handling of XML parse errors
+							2. added xml flag 2, to url_decode the original value
+
+	11-Mar-2010		kwb		added support for manually mapping fields in FormFields, without a prepared mapping array
+
+	16-Jul-2010		kwb		1. added support to FormFields for "value-item" and "hide/show" fields
+							2. xmlconvert() will now return leaf nodes with flags="1" as an empty array
+
+	19-Jul-2010		kwb		added _xmlerror to return most recent xml parse error
+
+	6-Aug-2010		kwb		added replyhook wrapper around the AJAX callback that will
+							automatically check readyState and provide miscobj as a param
+
+	17-Aug-2010		kwb		better handled AJAX errors by sending NULL to the callback
+
+	1-Nov-2010		kwb		added support for PopupMenu objects - only calls getvalue() and setvalue()
+							and they must be manually placed into the field map
+
+	8-Nov-2010		kwb		1. added support to FormFields for mapped fields to be ignored
+							2. added optional mode param to xmlparse() to fetch attributes for each node
+
+	20-Jan-2011		kwb		added AJAXCall() improved alternative to AJAXRequest()
+
+	11-Mar-2011		kwb		added xmlparse_client()
+
+	30-Mar-2011		kwb		added support for catching xml parse errors in Chrome
+
+	7-Apr-2011		kwb		added isarray parameter to make_request, to simply map array indexes to values
+
+	17-May-2011		kwb		removed a line of debug code from xmlconvert() to improve loading times
+							it was implicitly converting array values to strings, which is expensive
+
+	18-May-2011		kwb		1. added ability to use a <select> as a valueitem mapping in FormFields
+							2. added request_diff() to FormFields
+
+	20-May-2011		kwb		added filter_field() to FormFields
+
+	28-Jun-2011		kwb		added class AJAXForm
+
+	29-Jun-2011		kwb		1. removed 'Connection: Close' from the AJAX header when sending POST data
+							2. added include file dependencies
+
+	23-May-2012		kwb		1. automatically used current URL when submitting an AJAXForm with an empty action
+							2. added optional mimetype param to AJAXCall() to specify content-type
+
+	31-May-2012		kwb		1. changed AJAXCall() request method to GET when request data is an empty string
+								but still allowed empty posts if data is non-empty boolean or other non-string type
+							2. added automatic addition of __sesstok to POST data in AJAXCall() and AJAXRequest()
+
+	20-Jul-2012		kwb		prevented error when __sesstok_request() is undefined
+
+	3-Oct-2012		kwb		1. encoded the fieldstr in FormFields_request_diff()
+							2. prevented error in FormFields_write() when value-item target node is missing
+
+	11-Oct-2012		kwb		prevented FormFields_write() from modifying the value of the __sesstok field
+
+	7-Dec-2012		kwb		added radio button support in AJAXForm()
+
+	18-Jan-2013		kwb		1. allowed <span> elements to be used as fields in AJAXForm() by setting attribute 'field'
+							2. added optional arg diffdata to AJAXForm_submit()
+
+	22-May-2013		kwb		1. added is_subset() to check if an object is either an Array or generic Object
+								this allows the FormFields data to have subsets that are generic Objects
+							2. implemented object prototype matching in FormFields to detect field types
+								this is more reliable than making assumptions based on property names
+
+	13-Aug-2013		kwb		1. added optional param filterfunc to AJAXForm() in order to exclude specific form elements
+							2. added diff_siblings option to FormFields to cause sibling fields to also be treated as different
+
+	3-Aug-2016		kwb		improved error handling in xmlparse() to catch any exceptions raised while parsing the XML
+*/
+
+// try to include dependencies
+if ( window.__include != null )
+{
+	__include.depends( 'client.js', [
+		'/js/miscutil.js'
+	] );
+}
+
+var _ms_XMLHttpRequest_ActiveX = '';		// cache the correct object name
+var _xmlparse = null;						// global xml parser
+var _xmlerror = null;						// most recent xml parse error
+
+// ********************************************************************************
+// general functions
+// ********************************************************************************
+
+/*
+	make_request()
+
+	returns a URL encoded request string from the given input
+
+	isarray mode simply maps object member data directly to request fields
+	returns <member>=<value> for each member
+	sub-array members will be expanded using encode_array()
+
+	normal mode maps HTML elements to request fields by ID
+	thefields can be any of the following:
+		FormFields object:	uses the request() method
+		element ID string:	returns <elemID>=<value>
+		element object:		returns <elemID>=<value>
+		array of elements:	returns <elemID>=<value> for each array item
+*/
+ function make_request( thefields, isarray )
+{
+	if ( ! thefields ) return null;
+
+	var request = '';
+
+	if ( isarray )
+	{
+		for ( var i in thefields )
+		{
+			if ( thefields[i] != null )
+			{
+				if ( typeof thefields[i] == 'object' )
+					request += encode_array( thefields[i], i ) + '&';
+				else
+					request += i + '=' + encode( thefields[i] ) + '&';
+			}
+		}
+		return request;
+	}
+
+	if ( thefields.fieldmap )
+	{
+		// fieldmap object
+		request = thefields.request();
+	}
+	else if ( typeof thefields == 'string' )
+	{
+		// name of single object
+		var f = $( thefields );
+		if ( f ) request = f.id + '=' + encode( getvalue( f ) );
+	}
+	else if ( thefields.id )
+	{
+		// single object
+		request = thefields.id + '=' + encode( getvalue( thefields ) );
+	}
+	else
+	{
+		// plain array of objects
+		for ( var i = 0; i < thefields.length; i ++ )
+		{
+			request += thefields[i].id + '=' + encode( getvalue( thefields[i] ) ) + '&';
+		}
+	}
+
+	return request;
+}
+
+// returns true if object is a subset container rather than a leaf value type of object
+function is_subset( obj )
+{
+	return ( obj != null && ( obj instanceof Array || obj.constructor == Object ) );
+}
+
+// ********************************************************************************
+// xml functions
+// ********************************************************************************
+
+function XNode( attrs, thevalue )
+{
+	this.attributes = attrs;
+	if ( thevalue == null )
+		this.children = new Array();
+	else
+		this.value = thevalue;
+}
+
+var _lvl = 0;
+var _maxlvl = 0;
+// if mode = 0, each node will just be an index and value
+// if mode = 1, each node will have an attributes and children/value member
+function xmlconvert( xmlobj, mode, branch, idx, parentflags )
+{
+	var i, n, nodename;
+	var attrs = null;
+	var flags = xmlobj.getAttribute( 'flags' );
+	var xarray = xmlobj.childNodes;
+	var currbranch, nextbranch;
+
+	if ( mode == 1 && xmlobj.attributes.length > 0 )
+	{
+		// get any attributes from this node
+		attrs = new Object();
+		n = xmlobj.attributes.length;
+		for ( i = 0; i < n; i ++ )
+		{
+			attrs[ xmlobj.attributes[i].name ] = xmlobj.attributes[i].value;
+		}
+		// remove the flags attribute
+		if ( attrs.flags != null )
+			delete attrs.flags;
+	}
+
+	_lvl ++; echo ( '##### xmlconvert( idx=' + idx + ' lvl=' + _lvl + ' )' );
+	if ( _lvl > _maxlvl ) _maxlvl = _lvl;
+	if ( ! branch )
+	{
+		// traverse root level
+		if ( mode == 1 )
+			branch = new XNode( attrs );
+		else
+			branch = new Array();
+		for ( i = 0; i < xarray.length; i ++ )
+		{
+			if ( xarray[i].nodeType == 1 )
+			{
+				nodename = xarray[i].getAttribute( 'name' );
+				echo( 'nodename = ' + nodename );
+				if ( ! nodename ) nodename = xarray[i].nodeName.toLowerCase();
+				echo( '***** root xmlobj.childNodes[' + i + '] = [' + nodename + ']' );
+				xmlconvert( xarray[i], mode, branch, nodename, flags );
+			}
+			else
+				echo( 'xmlobj.childNodes[' + i + '].nodeType = ' + xarray[i].nodeType );
+		}
+		currbranch = ( mode == 1 ) ? branch.children : branch;
+		echoarray( currbranch ); _lvl --;
+		return branch;
+	}
+
+	currbranch = ( mode == 1 ) ? branch.children : branch;
+	echo( 'branch.length = ' + currbranch.length );
+	n = 0;
+	if ( xmlobj.firstChild )
+	{
+		// check for flags
+		if ( 0 != ( parentflags & 1 ) )
+			idx = currbranch.length;
+
+		// create a sub array
+		echo( 'xmlobj.childNodes.length = ' + xarray.length );
+		for ( i = 0; i < xarray.length; i ++ )
+		{
+			if ( xarray[i].nodeType == 1 )
+			{
+				if ( ! currbranch[idx] )
+				{
+					if ( mode == 1 )
+						currbranch[idx] = new XNode( attrs );
+					else
+						currbranch[idx] = new Array();
+					echo( '----- NEW BRANCH -----' );
+				}
+				echo( '...getting nodename...' );
+				nodename = xarray[i].getAttribute( 'name' );
+				if ( ! nodename ) nodename = xarray[i].nodeName.toLowerCase();
+				echo( '===== xmlobj.childNodes[' + i + '] = [' + nodename + ']' );
+				xmlconvert( xarray[i], mode, currbranch[idx], nodename, flags );
+				n ++;
+			}
+			else
+				echo( 'xmlobj.childNodes[' + i + '].nodeType = ' + xarray[i].nodeType );
+		}
+	}
+	if ( n == 0 )
+	{
+		// this is a leaf
+		n = ( xmlobj.text != undefined ) ? xmlobj.text : xmlobj.textContent;
+		echo( 'n = [' + n + ']' );
+		if ( 0 != ( parentflags & 1 ) )
+		{
+			// use current length as index
+			if ( n == '' ) n = idx;
+			idx = currbranch.length;
+		}
+		if ( 0 != ( flags & 1 ) )
+		{
+			// empty array
+			if ( mode == 1 )
+				n = new XNode( attrs );
+			else
+				n = new Array();
+		}
+		else
+		{
+			if ( 0 != ( flags & 2 ) )
+			{
+				// url_decode the value
+				n = decode( n );
+			}
+			if ( mode == 1 )
+				n = new XNode( attrs, n );
+		}
+		currbranch[idx] = n;
+
+		echo( 'leaf branch[' + idx + '] = [' + branch[idx] + ']' );
+	}
+	_lvl --;
+	echo( '----- lvl=' + _lvl );
+}
+
+/*
+	xmlparse()
+
+	loads the given xml content into an array structure
+	the node names should all be unique among the immediate siblings
+
+	if using attribute flags="1" then all child elements will become array elements, and the node names will be ignored
+	if using attribute flags="2" then url_decode will be performed on the element value
+
+	mode is optional, and will change the type of data that is returned (see below)
+	if mode == 1, then each node will have an attributes container
+
+	example xml:
+	<itemA attrA="7">
+		<subA>1</subA>
+		<subB foo="bar">2</subB>
+		<subC>3</subC>
+	</itemA>
+	<itemB flags="1">
+		<x>4</x>
+		<x abc="xyz">5</x>
+		<x>6</x>
+	</itemB>
+	<itemC flags="2">%26laquo%3Bfoobar%26raquo%3B</itemC>
+
+	example output (mode 0 or undefined):
+	{
+		'itemA' => {
+			'subA' => 1,
+			'subB' => 2,
+			'subC' => 3,
+		}
+		'itemB' => {
+			[0] => 4,
+			[1] => 5,
+			[2] => 6
+		}
+		'itemC' => '&laquo;foobar&raquo;'
+	}
+
+	example output (mode 1):
+	{
+		'itemA' => {
+			attributes => { 'attrA' => 7 }
+			children => {
+				'subA' => { attributes => null, value => 1 },
+				'subB' => { attributes => { foo => 'bar' }, value => 2 },
+				'subC' => { attributes => null, value => 2 },
+			}
+		}
+		'itemB' => {
+			attributes => null
+			children => {
+				[0] => { attributes => null, value => 4 },
+				[1] => { attributes => { abc => 'xyz' }, value => 5 },
+				[2] => { attributes => null, value => 6 }
+			}
+		}
+		'itemC' => { attributes => null, value => '&laquo;foobar&raquo;' }
+	}
+*/
+function xmlparse( thexml, mode )
+{
+	if ( ! thexml )
+		return null;
+
+	var rc = true;
+	if ( ! thexml.documentElement )
+	{
+		var xmldata = ( typeof thexml == 'object' ) ? thexml.innerHTML : thexml;
+		try {
+			if ( window.DOMParser )
+			{
+				if ( ! _xmlparse ) _xmlparse = new DOMParser();
+				thexml = _xmlparse.parseFromString( xmldata, 'text/xml' );
+			}
+			else if ( window.ActiveXObject )
+			{
+				thexml = new ActiveXObject( 'Microsoft.XMLDOM' );
+				thexml.async = false;
+				thexml.loadXML( xmldata );
+			}
+		} catch( err ) {
+			_xmlerror = err;
+			rc = false;
+		}
+	}
+	if ( rc )
+	{
+		// check for parse errors
+		if ( thexml.parseError && thexml.parseError.errorCode != 0 )
+			rc = false;
+		else if ( thexml.documentElement )
+		{
+			// check for parse error in document
+			var elem = thexml.documentElement;
+			for ( var i = 0; i < 2 && rc && elem && elem.tagName; i ++ )
+			{
+				if ( elem.tagName.toLowerCase() == 'parsererror' )
+					rc = false;
+				else
+					elem = elem.firstChild;
+			}
+		}
+		else
+			rc = false;
+	}
+	if ( rc )
+	{
+		// convert the xml structure into an array
+		_xmlerror = null;
+		return xmlconvert( thexml.documentElement, mode );
+	}
+	else if ( thexml.parseError )
+		_xmlerror = 'error (' + thexml.parseError.errorCode + ') ' + thexml.parseError.reason;
+	else if ( thexml.documentElement.textContent )
+		_xmlerror = thexml.documentElement.textContent;
+	else
+		_xmlerror = 'unknown xml parse error';
+
+	// echo the parse error if any
+	if ( _xmlerror != null )
+	{
+		if ( window.console ) console.error( _xmlerror );
+		echo( _xmlerror );
+	}
+
+	return null;
+}
+
+// ********************************************************************************
+// AJAX functions
+// ********************************************************************************
+
+var _ms_XMLHttpRequest_ActiveX = ''; // cache the correct object name
+function NewHttpRequest()
+{
+	var ajax = null;
+
+	// check the dom to see if this is IE or not
+	if ( window.XMLHttpRequest )
+	{
+		ajax = new XMLHttpRequest();
+	}
+	else if ( window.ActiveXObject )
+	{
+		// Instantiate the latest MS ActiveX Objects
+		if ( _ms_XMLHttpRequest_ActiveX )
+		{
+			ajax = new ActiveXObject( _ms_XMLHttpRequest_ActiveX );
+		}
+		else
+		{
+			// loops through the various versions of XMLHTTP to ensure we're using the latest
+			var versions = [
+				'Msxml2.XMLHTTP.7.0', 'Msxml2.XMLHTTP.6.0', 'Msxml2.XMLHTTP.5.0', 'Msxml2.XMLHTTP.4.0',
+				'MSXML2.XMLHTTP.3.0', 'MSXML2.XMLHTTP', 'Microsoft.XMLHTTP'
+			];
+			for ( var i in versions )
+			{
+				try {
+					// try to create the object
+					// if it doesn't work, we'll try again
+					// if it does work, we'll save a reference to the proper one to speed up future instantiations
+					ajax = new ActiveXObject( versions[i] );
+					if ( ajax )
+					{
+						_ms_XMLHttpRequest_ActiveX = versions[i];
+						break;
+					}
+				}
+				catch ( objException )
+				{
+					// trap; try next one
+				};
+			}
+		}
+	}
+
+	return ajax;
+}
+
+// default callback handler
+AJAXRequest.prototype.defaulthook = function AJAXRequest_defaulthook( AJAX )
+{
+	// alert('AJAX response: ' + AJAX.readyState + "/" + AJAX.status + "/" + AJAX.statusText);
+	if ( AJAX.responseText )
+	{
+		// save the last returned value
+		_resonse = AJAX.responseText;
+	}
+}
+
+// callback wrapper to handle the AJAX reply
+AJAXRequest.prototype.replyhook = function AJAXRequest_replyhook( self )
+{
+	if ( self.AJAX.readyState == 4 )
+	{
+		self.process( ( ( self.AJAX.status == 200 || self.AJAX.status == 0 )
+			? self.AJAX : null ), self.miscobj );
+	}
+}
+
+function AJAXRequest( method, url, data, process, async, dosend, miscobj )
+{
+	// self = this; creates a pointer to the current function
+	// the pointer will be used to create a "closure". A closure
+	// allows a subordinate function to contain an object reference to the
+	// calling function. We can't just use "this" because in our anonymous
+	// function later, "this" will refer to the object that calls the function
+	// during runtime, not the AJAXRequest function that is declaring the function
+	// clear as mud, right?
+	// Java this ain't
+
+	var self = this;
+
+	this.AJAX = NewHttpRequest();
+	if ( this.AJAX == null ) return null;
+
+	// if no callback process is specified then use the default
+	this.process = ( typeof process == 'function' ) ? process : this.defaulthook;
+
+	// create an anonymous function to log state changes
+	this.AJAX.onreadystatechange = function() { self.replyhook( self ); }
+
+	// if no method specified, then default to POST
+	if ( method )
+		method = method.toUpperCase();
+	else if ( ! data )
+		method = 'GET';
+	else
+		method = 'POST';
+
+	// default to async mode
+	async = ( async == null ) || !! async;
+
+	// save misc object ref if one is given
+	this.miscobj = miscobj;
+
+	// create the connection
+	echo( 'AJAX connect: method=[' + method + '] url=[' + url + '] data=[' + data + ']' );
+	this.AJAX.open( method, url, async );
+	if ( method == 'POST' )
+	{
+		//this.AJAX.setRequestHeader( 'Connection', 'close' );
+		this.AJAX.setRequestHeader( 'Content-Type', 'application/x-www-form-urlencoded' );
+		if ( typeof data == 'string' )
+		{
+			// make sure the session token is present
+			if ( window.__sesstok_request != null )
+				data = __sesstok_request( data );
+		}
+		else // do an empty post if data is not a string
+			data = '';
+	}
+	else
+	{
+		this.AJAX.setRequestHeader( 'If-Modified-Since', 'Sat, 1 Jan 2000 00:00:00 GMT' );
+		data = null;
+	}
+
+	// if dosend is true or undefined, send the request
+	// only fails is dosend is false
+	// you'd do this to set special request headers
+	if ( dosend || dosend == null )
+		this.AJAX.send( data );
+
+	return this.AJAX;
+}
+
+/*
+	AJAXCall()
+
+	simplified version of AJAXRequest with some key differences:
+		1. does not use a temporary wrapper object to make the AJAX call
+		2. removed 'async' argument
+			the ajax call will always be async when a callback is given
+			without a callback it will always be synchronous
+		3. removed 'dosend' argument
+			the ajax call will always be executed immediately
+		4. method is dependant on whether or not data is given
+		5. changed 'miscobj' argument to 'owner'
+			the callback will now be called from the owner's context
+			rather than passing it as an argument to the callback
+		6. an additional 'miscdata' argument is also available for the callback
+		7. optional mimetype param allows custom content-type in the request
+			also if set, the response status will be ignored in the callback
+*/
+function AJAXCall( url, process, data, owner, miscdata, mimetype )
+{
+	var ajax = NewHttpRequest();
+	if ( ajax == null )
+		return null;
+
+	// if no callback process is specified then execute synchronously
+	// and the results will be available from the returned object
+	var async = ( process != null );
+	if ( async && typeof process == 'function' )
+	{
+		ajax.onreadystatechange = function() {
+			if ( ajax.readyState == 4 )
+			{
+				var aa = ( mimetype != null || ajax.status == 200 || ajax.status == 0 ) ? ajax : null;
+				if ( owner != null )
+					process.call( owner, aa, miscdata );
+				else
+					process( aa, miscdata );
+			}
+		};
+	}
+
+	// only use POST if data is provided
+	var post = !! data;
+
+	// create the connection
+	ajax.open( ( post ? 'POST' : 'GET' ), url, async );
+
+	// set HTTP headers
+	if ( post )
+	{
+		//ajax.setRequestHeader( 'Connection', 'close' );
+		ajax.setRequestHeader( 'Content-Type', ( mimetype == null ) ? 'application/x-www-form-urlencoded' : mimetype );
+		if ( typeof data == 'string' )
+		{
+			// make sure the session token is present (unless mimetype is set)
+			if ( mimetype == null && window.__sesstok_request != null )
+				data = __sesstok_request( data );
+		}
+		else // do an empty post if data is not a string
+			data = '';
+	}
+	else
+	{
+		ajax.setRequestHeader( 'If-Modified-Since', 'Sat, 1 Jan 2000 00:00:00 GMT' );
+		data = null;
+	}
+
+	// send the request
+	ajax.send( data );
+
+	return ajax;
+}
+
+// parses XML from the AJAX responseText, moving commented section into _debugdiv
+function xmlparse_client( client )
+{
+	if ( client == null )
+		return null;
+
+	var replydata = ( typeof client == 'object' ) ? client.responseText : client;
+	var x = replydata.indexOf( '<!--' );
+	x = ( x >= 0 ) ? replydata.indexOf( '-->', x + 4 ) + 3 : 0;
+	var rawxml = replydata.substr( x );
+	if ( _debugdiv )
+	{
+		// display the debug output
+		_debugdiv.innerHTML = extract_string( replydata, '<!--', '-->' ) + "\n<hr>"
+			+ "<pre style=\"text-align:left\">" + htmlentities( rawxml ) + '</pre>';
+	}
+
+	return xmlparse( rawxml );
+}
+
+// ********************************************************************************
+// class FormFields
+// ********************************************************************************
+
+/*
+	FormFields_load_table()
+
+	loads mapping table of fields in a <table> with predefined columns but an arbitrary number of rows
+	this is defined in the xml map using an '@' prefix before the name of the <table> element, and then
+	the next array will contain the column mappings, which is loaded per separate <tr>.
+
+	example:
+
+	<table id=tablename>
+		<tr>
+			<td><input type=text id=col1name></td>
+			<td><input type=text id=col2name></td>
+		</tr>
+		<tr>
+			<td><input type=text id=col1name></td>
+			<td><input type=text id=col2name></td>
+		</tr>
+	</table>
+	<xml><data>
+		<mytable>@tablename</mytable>
+		<x>
+			<col1>col1name</col1>
+			<col2>col2name</col2>
+		</x>
+	</data></xml>
+
+	example resulting fldmap array:
+		fldmap = Array{
+			[mytable] => Array{
+				[0] => Array{ [col1] => *obj*, [col2] => *obj* },
+				[1] => Array{ [col1] => *obj*, [col2] => *obj* }
+			}
+		}
+
+	themap = input array containing column definitions
+	thetable = the <table> element containing all the HTML fields
+	thefields = output array that will contain the field mapping table
+*/
+FormFields.prototype.load_table = function FormFields_load_table( themap, thetable, thefields )
+{
+	var m, row;
+	var child, fld;
+
+	// check each row
+	row = findchild( thetable, 'tr' );
+	while ( row )
+	{
+		// look for columns
+		fld = null;
+		for ( m in themap )
+		{
+			child = findchild( row, null, themap[m] );
+			if ( child )
+			{
+				if ( ! fld )
+				{
+					// start a new row
+					fld = new Array();
+					thefields.push( fld );
+				}
+				fld[m] = child;
+			}
+		}
+
+		// get next row
+		row = getnode( row, 0 );
+	}
+}
+
+/*
+	FormFields_valueitem()
+
+	returns the item for a given value
+
+	themap = the value-item mapping array
+	thevalue = the value to lookup
+*/
+FormFields.prototype.valueitem = function FormFields_valueitem( themap, thevalue )
+{
+	if ( themap != null && themap.valueitems != null )
+	{
+		themap = themap.valueitems;
+		if ( themap.options != null )
+		{
+			// mapping is <select> menu
+			for ( var i = 0; i < themap.options.length; i ++ )
+			{
+				var x = themap.options[i];
+				if ( ( x.value == null || x.value === '' ) && x.text == thevalue )
+					return thevalue;
+				if ( x.value == thevalue )
+					return x.text;
+			}
+		}
+		else
+		{
+			// mapping is array
+			for ( var i in themap )
+			{
+				if ( thevalue == themap[i].value )
+					return themap[i].item;
+			}
+		}
+	}
+	return null;
+}
+
+/*
+	FormFields_itemvalue()
+
+	returns the value for a given item
+
+	themap = the value-item mapping array
+	theitem = the item to lookup
+*/
+FormFields.prototype.itemvalue = function FormFields_itemvalue( themap, theitem )
+{
+	if ( themap != null && themap.valueitems != null )
+	{
+		themap = themap.valueitems;
+		if ( themap.options != null )
+		{
+			// mapping is <select> menu
+			for ( var i = 0; i < themap.options.length; i ++ )
+			{
+				var x = themap.options[i];
+				if ( x.text == theitem )
+					return ( x.value != null && x.value !== '' ) ? x.value : theitem;
+			}
+		}
+		else
+		{
+			// mapping is array
+			for ( var i in themap )
+			{
+				if ( theitem == themap[i].item )
+					return themap[i].value;
+			}
+		}
+	}
+	return null;
+}
+
+FormFields.prototype.field_id = function FormFields_field_id( currfld, theid )
+{
+	if ( typeof currfld == 'string' )
+	{
+		// field is a radio button group
+		theid = currfld;
+	}
+	else if ( typeof currfld == 'object' )
+	{
+		if ( currfld instanceof ValueItemValues || is_subset( currfld ) )
+		{
+			// value-item array or sub-array, not an actual field
+			// leave theid unchanged
+		}
+		else if ( currfld instanceof ValueItemFieldMap || currfld instanceof ShowHideFieldMap )
+		{
+			// field is mapped to a value-item array or show/hide field
+			if ( currfld.field != null )
+				theid = currfld.field.id;
+		}
+		else
+			theid = currfld.id;
+	}
+	return theid;
+}
+
+// constructor for valueitem values mapping
+function ValueItemValues( valueitems )
+{
+	this.valueitems = valueitems;
+}
+
+// constructor for valueitem field mapping
+function ValueItemFieldMap( field, mapidx )
+{
+	this.field = field;
+	this.mapidx = mapidx;
+}
+
+// constructor for show/hide field mapping
+function ShowHideFieldMap( field, vstyle )
+{
+	this.field = field;
+	this.vstyle = vstyle;
+}
+
+// loads references to currently mapped fields
+// themap and thefields are internal params used for recursion
+FormFields.prototype.load = function FormFields_load( themap, thefields )
+{
+	var i, z;
+	var stat = 0;
+
+	// get refs to the current html objects
+	if ( ! themap )
+	{
+		thefields = new Array();
+		themap = this.fieldmap;
+		this.fields = thefields;
+	}
+	for ( i in themap )
+	{
+		if ( is_subset( themap[i] ) )
+		{
+			if ( i == '_' )
+			{
+				// predefined mapping of ignored fields or subarrays
+				thefields._ = themap._;
+				continue;
+			}
+
+			switch ( stat )
+			{
+			case 1:
+				// column definition array
+				this.load_table( themap[i], $( themap[z].slice( 1 ) ), thefields[z] );
+				stat = 0;
+				break;
+
+			case 2:
+				// value-item mapping array
+				thefields[z].valueitems = themap[i];
+				stat = 0;
+				break;
+
+			default:
+				// normal array in field map
+				thefields[i] = new Array();
+				this.load( themap[i], thefields[i] );
+			}
+		}
+		else
+		{
+			var k = themap[i].slice( 0, 1 );
+			var fldname = themap[i].slice( 1 );
+			switch ( k )
+			{
+			case '*':
+				// load all elements in the list into a standard array
+				var tmplist = document.getElementsByName( fldname );
+				var tmparray = new Array(); thefields[i] = tmparray;
+				for ( z = 0; z < tmplist.length; z ++ )
+					tmparray[z] = tmplist[z];
+				break;
+
+			case '?':
+				// this field is a radio button group
+				thefields[i] = fldname;
+				break;
+
+			case '@':
+				// table definition, get column definitions in next array
+				stat = 1; z = i;
+				thefields[i] = new Array();
+				break;
+
+			case '#':
+				// value-item mapping:
+				// if fldname is blank, get value-item pairs in next array
+				//		the array data will be a list of objects {value,item}
+				//		in the xml, each value-item pair should look like this:
+				//			<x><value>1</value><item>One</item></x>
+				// if fldname is not blank, use the specified <select> object instead
+				// this is just the mapping, the fields that use this mapping
+				// will have the notation: "=field_id=mapping_name"
+				if ( fldname === '' )
+				{
+					stat = 2; z = i;
+					thefields[i] = new ValueItemValues( null );
+				}
+				else
+					thefields[i] = new ValueItemValues( $( fldname ) );
+				break;
+
+			case '=':
+				// value-item field, should have another '=' before mapping name
+				var d = fldname.indexOf( '=', 1 );
+				if ( d > 0 ) thefields[i] = ValueItemFieldMap(
+					$( fldname.slice( 0, d ) ),
+					fldname.slice( d + 1 )
+				);
+				break;
+
+			case '!':
+				// boolean flag to show/hide the field
+				// the display style will be used as the indicator
+				// if display is 'none', the default visible style will be 'inline'
+				thefields[i] = new ShowHideFieldMap( $( fldname ), 'inline' );
+				z = get_style( thefields[i].field, 'display' );
+				if ( z != 'inline' && z != 'none' ) thefields[i].vstyle = z;
+				break;
+
+			case '/':
+				// map the field, but otherwise ignore
+				if ( thefields._ == null ) thefields._ = new Array();
+				thefields._[i] = true;
+				thefields[i] = $( fldname );
+				break;
+
+			default:
+				thefields[i] = $( themap[i] );
+			}
+		}
+	}
+
+	// clear the dirty flag
+	this.dirty = false;
+}
+
+// returns the current value of the given field
+FormFields.prototype.read_fld = function FormFields_read_fld( currfld, thefields )
+{
+	var thevalue = null
+	if ( typeof currfld == 'string' )
+	{
+		// field is a radio button group
+		thevalue = getradiovalue( currfld );
+	}
+	else if ( typeof currfld == 'object' )
+	{
+		if ( currfld.nodeType != null )
+		{
+			// field is an HTML element
+			thevalue = getvalue( currfld );
+		}
+		else if ( currfld instanceof ValueItemValues || is_subset( currfld ) )
+		{
+			// value-item array or sub-array, not an actual field
+			return null;
+		}
+		else if ( currfld instanceof ValueItemFieldMap )
+		{
+			// field is mapped to a value-item array, use stored value attribute
+			thevalue = currfld.field.getAttribute( 'fldvalue' );
+			if ( thevalue == null )
+			{
+				var themap = currfld.mapidx;
+				if ( thefields[ themap ] != null )
+				{
+					// reverse lookup the value
+					thevalue = this.itemvalue( thefields[ themap ], getvalue( currfld.field ) );
+				}
+			}
+		}
+		else if ( currfld instanceof ShowHideFieldMap && currfld.field != null )
+		{
+			// field is hide/show, value is boolean
+			var disp = get_style( currfld.field, 'display' );
+			thevalue = ( disp != 'none' ) ? 1 : 0;
+		}
+		else if ( typeof currfld.getvalue == 'function' )
+		{
+			// field is a PopupMenu or similar object
+			return currfld.getvalue();
+		}
+	}
+	return thevalue;
+}
+
+// reads field values from the mapped html objects
+// thefields is an optional param used for recursion
+FormFields.prototype.read = function FormFields_read( thedata, thefields )
+{
+	if ( ! thefields )
+	{
+		if ( this.dirty ) this.load();		// reload the field map if dirty
+		thefields = this.fields;
+	}
+
+	// load each field
+	for ( var i in thefields )
+	{
+		if ( i == '_' || thefields[i] == null
+			|| ( thefields._ && thefields._[i] ) ) continue;
+
+		var currfld = thefields[i];
+		if ( typeof currfld == 'object' )
+		{
+			if ( currfld instanceof ValueItemValues )
+			{
+				// value-item array, not an actual field
+				continue;
+			}
+			if ( is_subset( currfld ) )
+			{
+				thedata[i] = new Array();
+				this.read( thedata[i], currfld );
+				continue;
+			}
+		}
+		thedata[i] = this.read_fld( currfld, thefields );
+	}
+}
+
+// helper function to determine if a field is writable or not
+FormFields.prototype.iswritable = function FormFields_iswritable( currfld )
+{
+	if ( currfld == null ) return false;
+
+	var rc = true;
+	if ( typeof currfld == 'string' )
+	{
+		// field is a radio button group - writable only if ALL radio items are enabled
+		var thegroup = document.getElementsByName( currfld );
+		if ( thegroup.length )
+		{
+			for ( var i = 0; i < thegroup.length; i ++ )
+			{
+				if ( thegroup[i].disabled )
+				{
+					rc = false;
+					break;
+				}
+			}
+		}
+		else if ( thegroup.disabled )
+			rc = false;
+	}
+	else if ( typeof currfld == 'object' )
+	{
+		if ( currfld.nodeType != null )
+		{
+			// field is an HTML element
+			if ( ! currfld.disabled )
+			{
+				var thetag = currfld.tagName.toLowerCase();
+				switch ( thetag )
+				{
+					// some types of input are read-only
+					case 'input':
+						var thetype = currfld.type;
+						switch ( thetype )
+						{
+							case 'hidden': case 'button':
+							case 'submit': case 'image': case 'reset':
+								rc = false;
+								break;
+						}
+						break;
+
+					// text boxes and menus are writable
+					case 'textbox': case 'select':
+						break;
+
+					// any other HTML elements are read-only
+					default:
+						rc = false;
+						break;
+				}
+			}
+			else
+				rc = false;
+		}
+		else if ( currfld instanceof ValueItemValues )
+		{
+			// value-item array, not an actual field - allow to be processed
+			rc = true;
+		}
+		else if ( currfld instanceof ShowHideFieldMap )
+		{
+			// field is hide/show, value is boolean - treat as read-only
+			rc = false;
+		}
+		else if ( currfld instanceof ValueItemFieldMap )
+		{
+			// field uses value-items
+			rc = this.iswritable( currfld.field );
+		}
+		else if ( typeof currfld.setvalue == 'function' )
+		{
+			// field is a PopupMenu or similar object
+			if ( currfld.disabled ) rc = false;
+		}
+		else if ( is_subset( currfld ) )
+			rc = true; // allow sub-arrays to be processed
+		else
+			rc = false; // treat unknown type field as read-only
+	}
+	return rc;
+}
+
+/*
+	write()
+
+	writes field values to the mapped html objects
+
+	thefields is an optional param used for recursion
+	writableonly is an optional param to only write to writable fields
+		whether a field is writable is based on input type and whether the input is enabled
+*/
+FormFields.prototype.write = function FormFields_write( thedata, thefields, writableonly )
+{
+	if ( ! thefields )
+	{
+		if ( this.dirty ) this.load();		// reload the field map if dirty
+		thefields = this.fields;
+	}
+	if ( thedata != null && typeof thedata == 'object' )
+	{
+		// populate each field
+		for ( var i in thefields )
+		{
+			if ( i == '_' || i == '__sesstok' || thefields[i] == null
+				|| ( thefields._ && thefields._[i] )
+				|| ( writableonly && ! this.iswritable( thefields[i] ) )
+			) continue;
+
+			var currfld = thefields[i];
+			if ( typeof currfld == 'string' )
+			{
+				// field is a radio button group
+				setradiovalue( currfld, thedata[i] );
+			}
+			else if ( typeof currfld == 'object' )
+			{
+				if ( currfld.nodeType != null )
+				{
+					// field is an HTML element
+					setvalue( currfld, ( thedata[i] != null ) ? thedata[i] : '' );
+				}
+				else if ( currfld instanceof ValueItemValues )
+				{
+					// value-item array, not an actual field
+					;
+				}
+				else if ( currfld instanceof ShowHideFieldMap )
+				{
+					// field is hide/show, value is boolean
+					currfld.field.style.display = ( thedata[i] != null && thedata[i] != 0 )
+						? currfld.vstyle : 'none';
+				}
+				else if ( thedata[i] != null )
+				{
+					if ( currfld instanceof ValueItemFieldMap )
+					{
+						if ( currfld.field != null )
+						{
+							// field is mapped to a value-item array
+							var themap = currfld.mapidx;
+							var theitem = '';
+							if ( thefields[ themap ] != null )
+							{
+								// find the matching value from the mapping array
+								theitem = this.valueitem( thefields[ themap ], thedata[i] );
+								currfld.field.setAttribute( 'fldvalue', thedata[i] );
+							}
+							setvalue( currfld.field, theitem );
+						}
+					}
+					else if ( typeof currfld.setvalue == 'function' )
+					{
+						// field is a PopupMenu or similar object
+						return currfld.setvalue( thedata[i] );
+					}
+					else if ( is_subset( thedata[i] ) )
+						this.write( thedata[i], currfld, writableonly );
+				}
+				else if ( is_subset( currfld ) )
+					this.write( null, currfld, writableonly );
+				else
+					setvalue( currfld, '' );
+			}
+		}
+	}
+	else
+	{
+		// clear each field
+		for ( var i in thefields )
+		{
+			if ( i == '_' || i == '__sesstok' || thefields[i] == null
+				|| ( thefields._ && thefields._[i] )
+				|| ( writableonly && ! this.iswritable( thefields[i] ) )
+			) continue;
+
+			if ( is_subset( thefields[i] ) )
+				this.write( null, thefields[i], writableonly );
+			else
+				setvalue( thefields[i], '' );
+		}
+	}
+}
+
+// compares data with field values and calls hook function if different
+// set the hook and external hook data in this.diff_hook and this.diff_misc
+// if enabled, this.diff_siblings will cause sibling fields (and their children) to also be treated as different
+// diffhook can also be a parameter, otherwise the param should be null
+// hook function args are ( fieldname, fieldvalue, fieldpath, miscdata )
+// thefields, thepath, and sibdiff are internal params used for recursion
+FormFields.prototype.diff = function FormFields_diff( thedata, diffhook, thefields, thepath, sibdiff )
+{
+	if ( ! thefields )
+	{
+		if ( this.dirty ) this.load();		// reload the field map if dirty
+		thefields = this.fields;
+		thepath = new Array();
+	}
+	if ( ! diffhook )
+		diffhook = this.diff_hook;
+
+	if ( ! sibdiff && this.diff_siblings )
+	{
+		// just check if any leaf siblings are different
+		for ( var i in thefields )
+		{
+			if ( i == '_' || thefields[i] == null
+				|| ( thefields._ && thefields._[i] ) ) continue;
+
+			var currfld = thefields[i];
+			if ( typeof currfld == 'object' && ( currfld instanceof ValueItemValues || is_subset( currfld ) ) )
+				continue;
+
+			var thevalue = to_string( this.read_fld( currfld, thefields ) );
+			if ( thedata == null || to_string( thedata[i] ) != thevalue )
+			{
+				sibdiff = true;
+				break;
+			}
+		}
+	}
+
+	// compare each field
+	for ( var i in thefields )
+	{
+		if ( i == '_' || thefields[i] == null
+			|| ( thefields._ && thefields._[i] ) ) continue;
+
+		var currfld = thefields[i];
+		if ( typeof currfld == 'object' )
+		{
+			if ( currfld instanceof ValueItemValues )
+			{
+				// value-item array, not an actual field
+				continue;
+			}
+			if ( is_subset( currfld ) )
+			{
+				thepath.push( i );
+				this.diff( ( thedata != null ? thedata[i] : null ), diffhook, currfld, thepath, sibdiff );
+				thepath.pop();
+				continue;
+			}
+		}
+		var thevalue = to_string( this.read_fld( currfld, thefields ) );
+		if ( sibdiff || ( ! this.diff_siblings && ( thedata == null || to_string( thedata[i] ) != thevalue ) ) )
+			diffhook( i, thevalue, thepath, this.diff_misc );
+	}
+}
+
+// helper function used by request() and request_diff() to filter the results
+// checks if a fieldname matches a request filter
+// thefilter can be a string or array of strings to be filtered
+// to match, the fieldname must "start with" a filter string
+FormFields.prototype.filter_field = function FormFields_filter_field( fldstr, thefilter )
+{
+	if ( thefilter == null ) return false;
+
+	var rc = false;
+	if ( typeof thefilter == 'object' )
+	{
+		// check for multiple filter strings
+		for ( var f in thefilter )
+		{
+			if ( fldstr.indexOf( thefilter[f] ) == 0 )
+			{
+				rc = true;
+				break;
+			}
+		}
+	}
+	else if ( fldstr.indexOf( thefilter ) == 0 )
+		rc = true;
+
+	return rc;
+}
+
+// builds a request string containing only values that differ from the given data
+// this does NOT use the diff_hook or diff_misc members
+// if enabled, diff_siblings will cause sibling fields to also be treated as different
+// thefilter is optional -- see filter_field()
+FormFields.prototype.request_diff = function FormFields_request_diff( diffdata, thefilter )
+{
+	var request = '';
+	var self = this;
+	this.diff( diffdata,
+		function( fieldname, fieldvalue, fieldpath )
+		{
+			var fldstr;
+			if ( fieldpath.length > 0 )
+			{
+				fldstr = fieldpath[0];
+				for ( var p = 1; p < fieldpath.length; p ++ )
+				{
+					fldstr += '[' + fieldpath[p] + ']';
+				}
+				fldstr += '[' + fieldname + ']';
+			}
+			else
+				fldstr = fieldname;
+			if ( thefilter == null || ! self.filter_field( fldstr, thefilter ) )
+				request += encode( fldstr ) + '=' + encode( fieldvalue ) + '&';
+		}
+	);
+	return request;
+}
+
+// builds request string from *ALL NON-EMPTY* current field data
+// thefilter is optional -- see filter_field()
+// thefields and theprefix are internal params used for recursion
+FormFields.prototype.request = function FormFields_request( thefilter, thefields, theprefix )
+{
+	if ( ! thefields )
+	{
+		if ( this.dirty ) this.load();		// reload the field map if dirty
+		thefields = this.fields;
+	}
+	if ( ! theprefix )
+		theprefix = '';
+
+	var thedata = '';
+	for ( var i in thefields )
+	{
+		if ( i == '_' || thefields[i] == null
+			|| ( thefields._ && thefields._[i] ) ) continue;
+
+		var thevalue = null;
+		var currfld = thefields[i];
+		if ( typeof currfld == 'object' )
+		{
+			if ( currfld instanceof ValueItemValues )
+			{
+				// value-item array, not an actual field
+				continue;
+			}
+			if ( is_subset( currfld ) )
+			{
+				if ( theprefix != '' )
+					thedata += this.request( thefilter, currfld, theprefix + '['+ i + ']' );
+				else
+					thedata += this.request( thefilter, currfld, i );
+				continue;
+			}
+		}
+		thevalue = this.read_fld( currfld, thefields );
+		if ( thevalue != null && thevalue !== '' )
+		{
+			// adding a field to the request
+			var j = ( this.flags && 0 != ( this.flags & 1 ) )
+				? this.field_id( currfld, i ) : i;
+			var fldstr = ( theprefix !== '' ) ? theprefix + '[' + j + ']' : j;
+			if ( thefilter == null || ! this.filter_field( fldstr, thefilter ) )
+				thedata += fldstr + '=' + encode( thevalue ) + '&';
+		}
+	}
+
+	return thedata;
+}
+
+/*
+	FormFields()
+
+	inits a FormFields object, used to compile form data to be sent with AJAX
+	xml field map elements are indexed by data field, and contain the html id of the field
+	checkbox objects are automatically handled, and converted to 1 or 0
+
+	thefieldmap = object id of xml data island containing field mappings  ( fieldmap[field] => 'objname' )
+	theflags = (optional) bit flags that set various options
+		1 = build request string using element id instead of field name
+*/
+function FormFields( thefieldmap, theflags )
+{
+	// members
+	this.fieldmap = null;
+	if ( typeof thefieldmap == 'string' ) 					// maps field names to html obj names
+		this.fieldmap = xmlparse( $( thefieldmap ) );
+	else if ( thefieldmap != null )
+		this.fieldmap = ( is_subset( thefieldmap ) )
+			? thefieldmap : xmlparse( thefieldmap );
+
+	this.fields = null;										// will contain the actual html obj refs
+	this.flags = theflags;									// sets various data handling options
+	this.dirty = false;										// if true, will reload the map before any operation
+
+	// external params for diff function
+	this.diff_hook = null;
+	this.diff_misc = null;
+
+	// option to NOT split up siblings when diff'ing fields
+	// applies to all diff functions
+	this.diff_siblings = false;
+}
+
+// ********************************************************************************
+// class AJAXForm
+// ********************************************************************************
+
+// subclass of FormFields
+AJAXForm.prototype = new FormFields();
+
+/*
+	AJAXForm()
+
+	wrapper object around FormFields that uses a <form> to submit an AJAX request
+	using the same conventions the browser does by default:
+
+		- maps inputs to request fields using the element name
+		- uses the form action and method attributes to submit the request
+		- the callback, owner, and miscdata define the AJAXCall response handler
+
+	to exclude some elements that are technically in the form, provide a filterfunc:
+		boolean filterfunc( element )
+*/
+function AJAXForm( theform, callback, owner, miscdata, filterfunc )
+{
+	// store the callback args
+	this.aargs = {
+		callback : callback,
+		owner : owner,
+		miscdata : miscdata
+	};
+
+	// get the <form> element
+	if ( typeof theform == 'string' ) theform = $( theform );
+	this.form = theform;
+
+	// build the fieldmap
+	var thefields = new Array();
+	this.fields = thefields;
+	for ( var i = 0; i < theform.elements.length; i ++ )
+	{
+		if ( ! filterfunc || filterfunc( theform.elements[i] ) )
+		{
+			var f = theform.elements[i].name;
+			if ( f && ! thefields[f] )
+				thefields[f] = theform.elements[i].type == 'radio' ? f : theform.elements[i];
+		}
+	}
+	findchildren_ex( theform, function ( xnode ) {
+		if ( xnode && xnode.tagName && xnode.tagName.toLowerCase() == 'span' )
+		{
+			var fld = xnode.getAttribute( 'field' );
+			if ( fld != null )
+			{
+				thefields[fld] = xnode;
+				return true;
+			}
+		}
+		return false;
+	}, false );
+
+	// init AJAX status flag
+	this.status = 0;
+}
+
+// form submit callback wrapper
+AJAXForm.prototype.clienthook = function AJAXForm_clienthook( aa, aargs )
+{
+	this.status = 0;
+	if ( aargs.callback != null )
+	{
+		// call the actual callback function
+		if ( aargs.owner != null )
+			aargs.callback.call( aargs.owner, aa, aargs.miscdata );
+		else
+			aargs.callback( aa, aargs.miscdata );
+	}
+}
+
+// if diffdata is provided, the request will only contain fields that are different
+AJAXForm.prototype.submit = function AJAXForm_submit( diffdata )
+{
+	if ( this.status != 0 ) return;
+
+	// build the request string
+	var request = ( diffdata == null ) ? this.request() : this.request_diff( diffdata );
+
+	// build the URL
+	var url = this.form.action;
+	if ( url == '' ) url = window.location.pathname;
+	if ( this.form.method.toLowerCase() == 'get' )
+	{
+		url += '?' + request;
+		request = null;
+	}
+
+	// submit the request
+	this.status = 1;
+	AJAXCall( url, this.clienthook, request, this, this.aargs );
+}

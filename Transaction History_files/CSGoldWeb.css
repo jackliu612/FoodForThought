@@ -1,0 +1,764 @@
+/*
+	CSGoldWeb.css
+
+	main style sheet that should be used by ALL of CSGoldWeb
+	this should only contain common styles used accross all web products
+	application specific stylesheets should be loaded after this one
+
+	HOW TO CUSTOMIZE STYLES:
+	1. create a new CSS file in the css directory (do NOT edit this one)
+		hint: name your new CSS file starting with "local_" to ensure it will not get overwritten
+	2. add a reference to the new CSS file in CSGoldWeb.conf by adding it to the list of global CSS
+		css = "CSGoldWeb,local_customstyles"
+		note the CSS files will be loaded in the specified order, and the .css extension is not required
+	3. copy the styles you wish to modify to your custom CSS file and change the desired properties
+
+	each set of header templates has a different class in the <body> tag
+	use this to make different custom styles for WebCard Center and AdminWeb
+		body.CsgCardCenter = WebCard Center
+		body.CsgAdminWeb = AdminWeb
+
+	the menus primarily use the div.menu and .flyoutLink styles for the menu item appearance.
+	additionally, the td.MenuBackground and table.menuBorder styles can be used to customize the entire menu appearance.
+*/
+
+body {
+	margin: 0;
+	font-family: Arial, sans-serif;
+	font-size: 13px;
+}
+
+/* table styles */
+table {
+	border-collapse: collapse;
+}
+tr.heading {
+	background-color: #7291CF !important;
+	font-weight: 700;
+}
+tr.heading2 {
+	background-color: #B5C6E8;
+	font-weight: 700;
+}
+tr.title {
+	font-weight: 700;
+	background-color: #3B4990 !important;
+	font-size: medium ;
+	color: #FFFFFF;
+}
+
+tr.row1, tr.row1 > td {
+	background-color: #D9E1F2;
+}
+tr.row2, tr.row2 > td {
+	background-color: #B5C6E8;
+}
+
+td.buttons, td.buttons2 { text-align: right; }
+td.buttons { padding-top: 20px; }
+td.buttons2 { padding-top: 5px; }
+
+td.alert1 {
+	background-color:#F3D8E3;
+	font-weight: 700;
+}
+td.alert2 {
+	background-color:#EAB3CA;
+	font-weight: 700;
+}
+td.warning1 {
+	background-color:#E3F3D8;
+	font-weight: 700;
+}
+td.warning2 {
+	background-color:#CAEAB3;
+	font-weight: 700;
+}
+td.disabled {
+	background-color:#CCCCCC;
+	font-weight: 700;
+}
+td.title{
+	font-weight: 700;
+	background-color: #3B4990 !important;
+	font-size: 12px ;
+	color: #FFFFFF;
+}
+
+/* help icon */
+
+#helpbutton {
+	position: relative;
+	width: 30px; height: 30px;
+	vertical-align: middle;
+}
+span#helpbutton {
+	display: inline-block;
+	margin-left: 5px;
+	line-height: 28px;
+}
+a#helpbutton {
+	text-decoration: none;
+}
+a#helpbutton.mobileButton, a#helpbutton.mobileButton:hover {
+	color: black;
+}
+#helpbutton.mobileButton {
+	width: 40px; height: 40px;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+span#helpbutton a, #helpbutton b {
+	position: absolute;
+	left: 0; top: 0;
+	width: 100%; height: 100%;
+	background: rgba(255,255,255,0.4);
+	border: 2px solid black;
+	border-radius: 50%;
+	box-sizing: border-box;
+	text-align: center;
+	font-size: 20px;
+	font-weight: 700;
+	font-family: Arial, sans-serif;
+	color: inherit;
+	text-decoration: none;
+}
+span#helpbutton a:hover {
+	color: inherit;
+	background: rgba(255,255,255,0.6);
+}
+
+#helpbutton.mobileButton b {
+	left: 4px; top: 4px;
+	width: 30px; height: 30px;
+	background: none;
+	line-height: 28px;
+}
+
+/* field list styles */
+
+table.fieldlist tr, table.fieldlist2 tr {
+	background-color: #D9E1F2;
+}
+table.fieldlist2 {
+	font-size: smaller;
+}
+td.fieldname, td.fieldname_left, td.fieldname_flat {
+	padding-right: 5px;
+	font-weight: bold;
+}
+td.fieldname, td.fieldname_left { background-color: #B5C6E8; }
+td.fieldname, td.fieldname_flat { text-align: right; }
+td.fieldname_left { text-align: left; }
+
+/* div styles */
+
+div.boxFrame {
+	display: inline-block;
+	border: 1px solid #CCCCCC;
+	padding: 10px;
+	margin: 5px;
+}
+
+/* text styles */
+
+.bold { font-weight: 700; }
+
+.highlight { background-color: yellow }
+
+.errmsg {
+	font-size: 36px;
+	color: #FF3333;
+}
+.emergency {
+	text-align: center;
+	font-size: 36px;
+	color: #FF3333;
+}
+
+.invalid {
+	color: #FF0000;
+}
+
+.readonly, [locked="1"] {
+	color: #777777;
+}
+
+/* input styles */
+input.readonly {
+	background-color: #EEEEEE;
+	border: 1px solid #777777;
+	padding: 2px 1px;
+}
+input.enabledtxt {
+	background-color: white;
+}
+input.disabledtxt {
+	background-color: #EBEBE4;
+	color: #777777;
+}
+input.enabledtxt, input.disabledtxt {
+	border: 1px solid #7291cf;
+	padding: 2px 1px;
+}
+
+/* framework styles */
+.gradientForward {
+	background-color: #4A74CA;
+	filter:progid:DXImageTransform.Microsoft.Gradient(startColorStr='#4A74CA', endColorStr='#FFFFFF', gradientType='1');
+	background: -webkit-linear-gradient( left, #4A74CA, #FFFFFF );
+	background: -moz-linear-gradient( left, #4A74CA, #FFFFFF );
+	background: -o-linear-gradient( left, #4A74CA, #FFFFFF );
+	background: linear-gradient( to right, #4A74CA, #FFFFFF );
+}
+.gradientReverse {
+	background-color: #FFFFFF;
+	filter:progid:DXImageTransform.Microsoft.Gradient(startColorStr='#FFFFFF', endColorStr='#4A74CA', gradientType='1');
+	background: -webkit-linear-gradient( right, #4A74CA, #FFFFFF );
+	background: -moz-linear-gradient( right, #4A74CA, #FFFFFF );
+	background: -o-linear-gradient( right, #4A74CA, #FFFFFF );
+	background: linear-gradient( to left, #4A74CA, #FFFFFF );
+}
+.gradientForward img, .gradientReverse img { display: block; }
+.footer { color: black; }
+
+#divContent > table > tbody > tr > td {
+    padding: 0;
+}
+
+#header {
+	position: relative;
+}
+
+#header img {
+	vertical-align: middle;
+	display: inline-block;
+	height: 60px;
+}
+
+#header .left {
+	font-family: "Century Gothic", Arial;
+	color: black;
+	line-height: 60px;
+	display: inline-block;
+	margin-right: 20px;
+	vertical-align: middle;
+	font-size: 1.2em;
+}
+
+#header td.right {
+	padding-right: 8px;
+	text-align: right;
+	white-space: nowrap;
+}
+#header td.right form {
+	display: inline;
+}
+
+#mainMenu .menuTitle {
+	margin: 8px 0 0 0;
+	font-weight: 700;
+	padding-right: 6px;
+	text-align: right;
+}
+
+#mainMenu .splitter {
+	margin: 8px 0;
+	height: 1px;
+	background-color: darkgray;
+}
+
+div[align=center] table, center table { text-align: left; }
+
+/* anchor styles */
+a { text-decoration: underline }
+
+a img { border: 0; }
+
+a:hover				{ color: #FF0000; }			/* red */
+a:active			{ color: #FF7700; }			/* orange */
+
+a.footer:link		{ color: black; }
+a.footer:visited	{ color: black; }
+
+a.command:link, a.command:visited			{ color: #0037AA; }			/* dark blue */
+a.command:hover, a.command:active			{ color: #C95072; }			/* purple */
+
+tr.heading a, tr.heading2 a {
+	color: black;
+	width: 100%;
+	display: block;
+}
+tr.heading a:hover, tr.heading a:active		{ color: #F2C9BB; }			/* pink */
+tr.heading2 a:hover, tr.heading2 a:active	{ color: #A95564; }			/* maroon */
+
+#menuCloser {
+	position: absolute;
+	z-index: 999;
+	border: 1px solid gray;
+	cursor: pointer;
+	top: 50%;
+	right: -7px;
+}
+
+#menuContainer {
+	position: relative;
+	padding-left: 8px;
+}
+
+td.MenuBackground {
+	border-right: 1px solid darkGray;
+	position: relative;
+}
+
+table.menu a { 
+	white-space: nowrap; 
+	border:1px solid #FFFFFF; 
+	display: block; 
+	text-align: right;
+}
+.flyoutLink a {
+	color: black;
+	text-decoration: none;
+	padding-left: 10px;
+	padding-right: 6px;
+}
+.flyoutLink a:hover {
+	color: black;
+	text-decoration: none;
+	background-color: #DCDCDC;
+	border:1px solid #A9A9A9;
+}
+.flyoutLink a:visited {
+	color: black;
+	text-decoration: none;
+}
+.flyoutLink a:active {
+	color: black;
+	text-decoration: none;
+	background-color: #A9A9A9;
+}
+
+/* special styles for the tab construct */
+.invis, .innerframe {
+	display:none;
+}
+#tabhead {
+	width: 100%;
+	margin: 0px 0px -5px -1px;
+}
+#tabhead td {
+	padding-bottom: 5px;
+	white-space: nowrap;
+}
+#outerframe {
+	text-align: left;
+	background-color: #7291CF;
+	padding: 4px 4px 4px 4px;
+}
+.innerframe, .tab, .subwnd {
+	background-color: #EBF0FA;
+}
+.innerframe {
+	margin-top: 5px;
+}
+.tab {
+	padding: 0px 3px 3px 3px;
+	border-bottom: 0px solid #EBF0FA;
+}
+.tab.selected {
+	border-bottom-width: 5px;
+}
+.tabcontent {
+	margin: 5px 5px 5px 5px;
+}
+.subwnd {
+	border: 3px groove black;
+	position: absolute;
+	z-index: 3;
+}
+
+/* special styles for the popupmenu construct */
+div.popupmenu
+{
+	/* outer frame around the whole control */
+	display: inline-block;
+	vertical-align: middle;
+	position: relative;
+	border: 1px solid #7291cf;
+	line-height: normal;
+	white-space: nowrap;
+	height: 22px;
+}
+div.popupdisabled, div.popupdisabled input
+{
+	background-color: #EBEBE4;
+}
+.popupbutton
+{
+	/* dropdown button icon */
+	position: absolute;
+	right: 0;
+	top: 1px;
+	border: 1px solid white;
+	width: 15px;
+	height: 18px;
+	z-index: 100;
+	float: none;
+}
+.popupbutton:not([popupdisabled="1"])
+{
+	cursor: pointer;
+}
+
+.popupbutton							{ background-image: url(../images/popupmenu_normal.gif); }
+.popupbutton[popupstate="0"]:not([popupdisabled="1"]):hover
+										{ background-image: url(../images/popupmenu_hover.gif); }
+.popupbutton[popupstate="1"]			{ background-image: url(../images/popupmenu_down.gif); }
+.popupbutton[popupdisabled="1"]			{ background-image: url(../images/popupmenu_disabled.gif); }
+
+.popupmenu input
+{
+	position: relative;
+	top: 1px;
+	min-height: 18px;
+	border-width: 0px;
+	padding-left: 1px;
+	margin: 0;
+/*	background-color: cyan;*/
+}
+.popupmenu .popupbutton ~ input {
+	padding-right: 20px;
+}
+
+div.popuplist
+{
+	/* the actual dropdown menu */
+	display: none;
+	float: none;
+	position: absolute;
+	padding: 2px;
+	background-color: white;
+	border: 1px solid #7291cf;
+	margin-top: -1px;
+	white-space: nowrap;
+	overflow-x: auto;
+	z-index: 101;
+}
+.popuplist table
+{
+	width: 100%;
+	padding: 0px;
+/*	border: 1px solid green;*/
+}
+.popuplist a
+{
+	width: 100%;
+	text-decoration: none;
+	font-size: 14px;
+/*	border: 1px solid red;*/
+}
+.popuplist a:link, .popuplist a:hover,
+.popuplist a:active, .popuplist a:visited
+{ color: navy; }
+
+.popuplist tr { height: 20px; }
+.popuplist td { white-space: nowrap; }
+td.popupicon { width: 20px; }
+td.popupicon div
+{
+	width: 20px;
+	height: 18px;
+	text-align: center;
+/*	border: 1px solid orange;*/
+	line-height: 16px;
+}
+div.popupicon
+{
+	/* menu item icon */
+	position:absolute;
+	z-index: 2;
+	text-align: center;
+/*	background-color: orange;*/
+/*	border: 1px solid magenta;*/
+}
+div.popupicon img
+{
+	margin-top: 2px;
+	margin-left: 2px;
+	border-width: 0px;
+}
+div.popupicon ~ input {
+	padding-left: 22px;
+}
+
+.popuplist .selected, .popuplist .selected a:hover
+{
+	background: navy;
+	color: white;
+}
+.popuplist .selected a { color: white; }
+
+.popuplist .saved a {
+	text-decoration: underline;
+}
+
+.popupDivider td{
+	cursor: default;
+}
+.popupDivider hr{
+	cursor: default;
+}
+
+
+/*
+	********************************************************************************
+	ManageMyID styles
+	********************************************************************************
+*/
+
+#contentNarrow {
+	width : 561px;
+	background-color : white;
+	border : 11px solid #BEAC7A;
+	border-bottom-width : 0px;
+	padding : 0 8px 0 8px;
+	margin : 0 0 0 4px;
+	height : 340px;
+	min-height : 340px;
+	text-align: left;
+}
+/* workaround non-standard IE6 behavior */
+html>body #contentNarrow {
+	height: auto;
+}
+#menu {
+	width : 148px;
+	min-height : 344px;
+	font-family : Arial, Helvetica, sans-serif;
+	font-size : 8pt;
+	font-weight : bold;
+	padding : 7px 7px 0 7px;
+	white-space : nowrap;
+	background-color : #A69774;
+	margin-left : 5px;
+	overflow : hidden;
+}
+/* MSIE version of min-height */
+#menu { height: expression(this.offsetHeight<344 ?'344px':'auto'); }
+#pageHeaderNarrow { width: 561px; }
+#pageHeaderNarrow h2 {
+	background: transparent url(../images/title-bg-narrow.gif) no-repeat top left;
+	margin-top: 10px;
+	height: 26px;
+	float: center;
+}
+#pageHeaderNarrow h2 span {
+	color : white;
+	padding-left : 10px;
+	font-weight : bold;
+	line-height : 25px;
+	text-align : left;
+}
+
+/* table styles */
+tr.logo {
+	height: 82px;
+	background-color: white;
+}
+tr.logo img { display: block; }
+td.formLabel {
+	text-align: left;
+	vertical-align: middle;
+	padding: 0 0 0 21px;
+}
+td.formLabelRight {
+	text-align: right;
+	vertical-align: middle;
+	padding: 0 0 0 0;
+}
+td.formField {
+	text-align: left;
+	vertical-align: middle;
+	padding: 0 0 0 21px;
+}
+td.formField2{
+	text-align: left;
+	vertical-align: middle;
+	padding: 0 0 2px 5px;
+}
+
+/* table data */
+table.Data {
+	margin: 0;
+	border-top: thin solid #BEAC7A;
+	border-bottom: thin solid #BEAC7A;
+/*	clear: both;*/
+	background: white;
+	width: 561px;
+	font-size : 9pt;
+}
+table.Data th {
+	font-weight: 700;
+	text-align: left;
+	padding: 0.2em 0.3em 0.2em 0.3em;
+	background: #BEAC7A;
+	color: #333300;
+}
+table.Data td {
+	padding: 0.1em 0.5em 0.1em 0.5em;
+}
+
+/* text styles */
+.Important {
+	padding: 0 0 20px 20px;
+	color: #000000;
+}
+.subText{
+	padding: 0 0 0px 0px;
+	color: #000000;
+/*	width : 550px;*/
+}
+.subText2{
+	padding: 0 0 0px 20px;
+	color: #000000;
+/*	width : 550px;*/
+}
+.Aside {
+	font: 8pt;
+}
+
+/* framework styles */
+.ImageButton, .ImageButtonW {
+	height: 21px;
+	font-family: sans-serif;
+	font-weight: 700;
+	font-size: 8pt;
+	border: none;
+	padding-bottom: 2px;
+	color: #333300;
+	vertical-align: middle;
+	background-color: lightgrey;
+	margin: 7px 5px 0px 0;
+}
+.ImageButton { width: 75px; background-image:url(../images/button_bg.gif); }
+.ImageButtonW { width: 125px; background-image:url(../images/button_bg_wide.gif); }
+.formSubmit { margin: 15px 10px 20px 0; }
+
+/* anchor styles */
+#menu a {
+	display: block;
+	text-align: left;
+}
+
+/**
+ * Styles for upgraded search control
+ */
+.search.upgraded {
+    background: white;
+    border: none;
+    position: relative;
+    top: 0;
+    display: inline-block;
+    font-size: 13px;
+    text-align: left;
+}
+
+.search.upgraded .expand {
+	position: absolute;
+	right: 4px;
+	top: 5px;
+	font-size: 1.2em;
+	padding: 2px 4px;
+	cursor: pointer;
+	background: white;
+}
+
+.search.upgraded .searchIcon,
+.search.upgraded .loadingIcon {
+    color: #555;
+    position: absolute;
+    z-index: 5;
+    top: 7px;
+    left: 8px;
+    font-size: inherit;
+}
+
+.search.upgraded .loadingIcon,
+.search.upgraded.loading .searchIcon {
+	display: none;
+}
+
+.search.upgraded.loading .loadingIcon {
+	display: block;
+	font-size: 1.5em;
+	left: 6px;
+	top: 5px;
+}
+
+.search.upgraded input {
+	width: 100%;
+	padding: 4px;
+	padding-left: 24px;
+	position: relative;
+	top: 0;
+	margin: 0;
+	background: transparent;
+	min-width: 180px;
+    font-size: inherit;
+}
+
+.search.upgraded input:focus {
+	outline: none;
+}
+
+.search.upgraded div.popupmenu {
+	padding: 2px;
+    box-shadow: inset 1px 4px 9px -6px rgb(170, 170, 170);
+    background: white;
+    font-size: 1em;
+    border: 1px solid gray;
+    height: auto;
+    width: 100% !important;
+}
+
+.search.upgraded div.popuplist {
+    padding: 4px 0 0;
+    margin-top: -1px;
+    border: 1px solid gray;
+    border-top: none;
+    font-size: 1em;
+    color: black;
+    width: 100% !important;
+}
+
+.search.upgraded .popuplist a {
+    font-size: 1em;
+}
+
+.search.upgraded .popuplist a:link,
+.search.upgraded .popuplist a:hover,
+.search.upgraded .popuplist .selected a:hover {
+    color: inherit;
+    background: transparent;
+}
+
+.search.upgraded .popuplist td {
+    padding: 4px 6px;
+    cursor: pointer;
+}
+
+.search.upgraded .popuplist .selected {
+    background: #eee;
+    color: inherit;
+}
+
+.search.upgraded .popuplist .saved {
+    background: #7291cf;
+    color: white;
+}
+
+.search.upgraded .popuplist .saved a {
+    text-decoration: none;
+}

@@ -1,0 +1,13 @@
+/*
+	WebCardCenter.css
+
+	contains styles specific for WebCardCenter and AdminWeb
+	only the styles that conflict with ManageMyID and NetCardManager should be included here
+
+	since MMID/NCM have been discontinued, this CSS file is no longer needed
+
+	-----------		----	-------------------------------------------------------
+	10-Mar-2008		kwb		created
+
+	6-Jun-2018		kwb		moved everything to CSGoldWeb.css since MMID/NCM are discontinued
+*/

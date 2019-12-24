@@ -1,0 +1,236 @@
+/*
+	global.js
+
+	contains javascript code to be used on every page, loaded by HTML_header_main.tpl
+
+	when __idletimer is defined prior to loading:
+		starts up a simple timer and events on document.body to monitor for user activity
+		and will automatically redirect after being idle for the specified amount of time
+	__idletimer should be defined as:
+		<script>var __idletimer = { timeout = #idle_timeout#, url = '#timeout_page#' }</script>
+
+	the function __apply_sesstok() is provided to make sure all POST forms contain __sesstok
+	forms that already have the field will not be affected, so it may be called multiple times
+	the session token must be provided in all POST requests or else the post data will not be processed
+	the attribute 'nosesstok' can be set to override this function for a particular form
+
+	------------	----	-------------------------------------------------------
+	16-May-2011		kwb		created
+
+	31-May-2012		kwb		1. added check to prevent errors if the idletimer is undefined
+							2. renamed the idletimer variable to be consistent with other site-wide globals
+							3. added function __apply_sesstok() to make sure all POST forms have __sesstok
+							4. renamed file to global.js
+
+	16-Apr-2013		cxv		1. moved functions into window.onload event to make sure the DOM
+							   is loaded before referencing document.body
+							2. added event listeners for the menu closer
+
+	04-Feb-2015		cxv		Remember whether menu closer was closed using localStorage
+
+	17-Jun-2015		cxv		Do nothing in __sesstok_request if __sesstok is not defined
+
+	4-May-2017		kwb		moved basic polyfills from miscutil.js
+
+	5-Jul-2017		kwb		added polyfill for Object.setPrototypeOf()
+*/
+
+// redefine window.console if it does not exist
+if ( window.console == null ) {
+	window.console = (function () {
+		var noop = function () {};
+		return {
+			debug : noop,
+			log   : noop,
+			info  : noop,
+			warn  : noop,
+			error : noop
+		};
+	})();
+}
+
+if ( Object.defineMethod == null ) {
+	// Object.defineMethod adds an object method as non-enumerable to prevent it from showing up in for loops
+	if ( Object.defineProperty != null && document.addEventListener != null ) {
+		Object.defineProperty( Object, 'defineMethod', { enumerable: false,
+			value: function( obj, method, func ) {
+				if ( obj[method] == null ) {
+					Object.defineProperty( obj, method, { enumerable: false, value: func } );
+				}
+			}
+		} );
+	} else {
+		Object.defineMethod = function( obj, method, func ) {
+			if ( obj[method] == null ) obj[method] = func;
+		};
+	}
+}
+if ( Object.assign == null ) {
+	// polyfill Object.assign()
+	Object.defineMethod( Object, 'assign',
+		function(){function n(n){if(null===n||void 0===n)throw new TypeError("Object.assign cannot be called with null or undefined");return Object(n)}var r=Object.prototype.hasOwnProperty;return function(t){for(var e,o=n(t),a=1;a<arguments.length;a++){e=Object(arguments[a]);for(var c in e)r.call(e,c)&&(o[c]=e[c])}return o}}()
+	);
+}
+if ( Object.setPrototypeOf == null ) {
+	// polyfill Object.setPrototypeOf()
+	if ( ({}).__proto__ === Object.prototype ) {
+		// the browser supports __proto__
+		Object.defineMethod( Object, 'setPrototypeOf',
+			function( obj, proto ) { obj.__proto__ = proto; return obj; }
+		);
+	} else {
+		// (MSIE <= 10) copy ALL members of the prototype CHAIN to the object
+		// NOTE: the prototype does not actually change since it requires creating a new object...
+		//		obj = Object.assign( Object.create( proto ), obj );
+		Object.defineMethod( Object, 'setPrototypeOf',
+			function(){ var f = function( obj, proto ) {
+				while ( proto && proto !== Object.prototype ) {
+					var props = Object.getOwnPropertyNames( proto );
+					for ( var p in props ) {
+						p = props[p];
+						if ( typeof obj[p] == 'undefined' && ! obj.hasOwnProperty( p ) ) {
+							obj[p] = proto[p];
+						}
+					}
+					proto = Object.getPrototypeOf( proto );
+				}
+				return obj;
+			}; f.__sham = true; return f; }()
+		);
+	}
+}
+if ( Array.isArray == null ) {
+	// polyfill Array.isArray()
+	Object.defineMethod( Array, 'isArray',
+		function( arg ) { return Object.prototype.toString.call( arg ) === '[object Array]'; }
+	);
+}
+
+if ( Function.prototype.bind == null ) {
+	// polyfill Function.bind() if not built-in
+	Object.defineMethod( Function.prototype, 'bind',
+		function( obj ) {
+			var slice = Array.prototype.slice,
+			args = slice.call(arguments,1),
+			self = this,
+			nop = function () {},
+			bound = function () {
+				return self.apply( this instanceof nop ? this : ( obj || {} ),
+					args.concat( slice.call(arguments) ) );
+			};
+			nop.prototype = self.prototype;
+			bound.prototype = new nop();
+			return bound;
+		}
+	);
+}
+
+
+window.onload = function ()
+{
+	// set up idle timeout detection
+	if ( window.__idletimer != null )
+	{
+		// setup the idle timer object
+		__idletimer.idle_count = 0;
+		__idletimer.idle_limit = __idletimer.timeout * 12 + 1;
+		__idletimer.on_idle = function()
+		{
+			this.idle_count ++;
+			if ( this.idle_count < this.idle_limit ) return;
+			// idle too long
+			window.clearInterval( this.tid );
+			this.tid = null;
+			window.location = this.url;
+		};
+		// start the idle timer
+		__idletimer.tid = window.setInterval( function() { __idletimer.on_idle(); }, 5000 );
+		// set events to detect user activity
+		document.body.onclick = function() { __idletimer.idle_count = 0; };
+		document.body.keypress = document.body.onclick;
+		document.body.onmousemove = document.body.onclick;
+	}
+
+	var menu = document.getElementById( 'mainMenu' );
+	var closer = document.getElementById( 'menuCloser' );
+	if ( menu && closer )
+	{
+		var hideMenu = function () {
+			menu.style.display = 'none';
+			if ( window.localStorage ) {
+				localStorage.setItem( 'csg_menu_closer_closed', 1 );
+			}
+			if ( window.dispatchEvent && window.CustomEvent ) {
+				window.dispatchEvent( new CustomEvent( 'resize' ) );
+			}
+		};
+		var showMenu = function () {
+			menu.style.display = 'block';
+			if ( window.localStorage ) {
+				localStorage.setItem( 'csg_menu_closer_closed', '' );
+			}
+			if ( window.dispatchEvent && window.CustomEvent ) {
+				window.dispatchEvent( new CustomEvent( 'resize' ) );
+			}
+		};
+
+		closer.onclick = function () {
+			if ( menu.style.display === '' || menu.style.display === 'block' ) {
+				hideMenu();
+			} else {
+				showMenu();
+			}
+		};
+
+		// ensure the enclosing element keeps its height so the menu closer
+		// element doesn't jump around on the page
+		var parent = closer.parentNode;
+		if ( parent.style.height === '' ) {
+			parent.style.height = parent.clientHeight + 'px';
+		}
+
+		// if the initial value of the csg_menu_closer_closed value is true,
+		// hide the menu
+		if ( window.localStorage && localStorage.getItem( 'csg_menu_closer_closed' ) ) {
+			hideMenu();
+		}
+	}
+};
+
+
+function __apply_sesstok()
+{
+	// make sure all forms with method=POST contain __sesstok
+	for ( var i = 0; i < document.forms.length; i ++ )
+	{
+		var f = document.forms[i];
+		if ( f.method.toLowerCase() == 'post' && ! ( '__sesstok' in f.elements )
+			&& null == f.getAttribute( 'nosesstok' ) )
+		{
+			var hfld = document.createElement( 'input' );
+			hfld.type = 'hidden';
+			hfld.name = '__sesstok';
+			hfld.value = window.__sesstok;
+			f.appendChild( hfld );
+		}
+	}
+}
+
+function __sesstok_request( data )
+{
+	if ( !window.__sesstok ) return data;
+
+	// make sure the request data contains __sesstok
+	switch ( typeof data )
+	{
+	case 'string':
+		if ( 0 != data.search( /^(.*&)?__sesstok=/ ) )
+			data += '&__sesstok=' + encodeURIComponent( window.__sesstok );
+		break;
+	case 'object':
+		if ( data.__sesstok == null )
+			data.__sesstok = window.__sesstok;
+		break;
+	}
+	return data;
+}
